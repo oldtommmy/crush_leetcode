@@ -30,7 +30,17 @@
 - **掌握度系统**：题目自动归类为"陌生/熟悉/熟练/精通"，支持近 7 日复习趋势看板
 - **Markdown 笔记**：每道题独立编辑器，沉淀解题思路
 - **浮动笔记面板**：做题时随时记录，可拖拽定位
-- **自动化周报**：支持定时推送美观的 HTML 统计周报（支持官方代理、EmailJS、Resend 及自定义 Webhook）
+- **自动化周报**：支持定时推送美观的 HTML 统计周报（由官方代发服务提供支持）
+
+### 🗺️ 路线图 / Roadmap
+
+- [x] **FSRS 5.0** 间隔复习算法集成
+- [x] **自动化周报**：每周进度动态直达邮箱
+- [x] **Markdown 笔记**：沉淀每道题的解题思路
+- [ ] **LLM 刷题深度分析**：接入大模型，分析你的代码风格与薄弱知识点，提供定制化复习建议
+- [ ] **云端同步**：支持 Google Drive / WebDAV 或 Chrome Storage 云端存储，多设备无缝同步
+- [ ] **社区激励**：刷题打卡看板与成就勋章系统
+- [ ] **更多平台适配**：探索 Codeforces / LintCode 等平台的兼容性
 
 ### 📸 截图预览 / Screenshots
 
@@ -70,7 +80,16 @@
 - **FSRS 5.0 Scheduling**: Dynamically calculates retrievability based on your feedback.
 - **Mastery System**: Tracks problems through "New/Familiar/Proficient/Mastered" tiers with 7-day activity charts.
 - **Markdown Notes**: Dedicated editor for every problem with syntax highlighting.
-- **Automated Digest**: Elegant HTML weekly reports delivered via Official Relay, EmailJS, Resend, or Custom Webhooks.
+- **Automated Digest**: Elegant HTML weekly reports delivered via Official Relay service.
+
+### 🗺️ Roadmap
+- [x] **FSRS 5.0** Algorithm Integration
+- [x] **Automated Weekly Digest** via email
+- [x] **Markdown Notes** support
+- [ ] **LLM AI Analysis**: Get deep insights into your coding patterns and personalized study plans via AI
+- [ ] **Cloud Sync**: Multi-device synchronization via Google Drive, WebDAV, or Chrome Cloud Storage
+- [ ] **Gamification**: Achievement system and contribution heatmaps
+- [ ] **Cross-Platform**: Support for other competitive programming platforms (Codeforces, etc.)
 
 ### 🛠️ Installation
 1. **Download**: Get the latest `.zip` archive from [Releases](https://github.com/oldtommmy/crush_leetcode/releases) and unzip it.
