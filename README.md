@@ -30,7 +30,7 @@
 - **掌握度系统**：题目自动归类为"陌生/熟悉/熟练/精通"，支持近 7 日复习趋势看板
 - **Markdown 笔记**：每道题独立编辑器，沉淀解题思路
 - **浮动笔记面板**：做题时随时记录，可拖拽定位
-- **自动化周报**：支持推送美观的 HTML 统计周报（支持官方代理、EmailJS、Resend 及自定义 Webhook）
+- **自动化周报**：支持定时推送美观的 HTML 统计周报（支持官方代理、EmailJS、Resend 及自定义 Webhook）
 
 ### 📸 截图预览 / Screenshots
 
@@ -73,7 +73,7 @@
 - **Automated Digest**: Elegant HTML weekly reports delivered via Official Relay, EmailJS, Resend, or Custom Webhooks.
 
 ### 🛠️ Installation
-1. **Download**: Get the latest `crush_leetcode_v0.0.1.zip` archive from [Releases](https://github.com/oldtommmy/crush_leetcode/releases) and unzip it.
+1. **Download**: Get the latest `.zip` archive from [Releases](https://github.com/oldtommmy/crush_leetcode/releases) and unzip it.
 2. **Extensions Page**: Open Chrome and navigate to `chrome://extensions/`.
 3. **Developer Mode**: Toggle on "Developer mode" in the top right corner.
 4. **Load Unpacked**: Click "Load unpacked" and select the folder you just extracted.
