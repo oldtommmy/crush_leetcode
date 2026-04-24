@@ -1,0 +1,325 @@
+import { isDailyAlarm, scheduleDailyAlarm } from './alarms';
+import { sendWeeklySummaryEmail } from './emailWebhook';
+import { notifyDailyPlan, notifyTest } from './notifications';
+import { todayDateString } from '../shared/date';
+import { applyReview } from '../shared/review/scheduler';
+import {
+  selectDailyRemainingProblems,
+  selectDueProblems,
+  selectReviewStats,
+  selectTodayCompletedProblems,
+  selectWeeklySummaryStats
+} from '../shared/review/selectors';
+import {
+  markDailyNotificationSent,
+  markEmailFailure,
+  markWeeklySummarySent,
+  shouldSendDailyNotification,
+  shouldSendWeeklySummary
+} from '../shared/reminders/delivery';
+import {
+  getState,
+  importState,
+  previewImportState,
+  saveNote,
+  setState,
+  updateState
+} from '../shared/storage/chromeStorage';
+import type { DueProblem, ReviewLog, RuntimeRequest, RuntimeResponse } from '../shared/types';
+
+let reviewWriteQueue: Promise<unknown> = Promise.resolve();
+
+function enqueueReviewWrite<T>(task: () => Promise<T>): Promise<T> {
+  const next = reviewWriteQueue.then(task, task);
+  reviewWriteQueue = next.catch(() => undefined);
+  return next;
+}
+
+async function runReminderCheck(): Promise<DueProblem[]> {
+  let state = await getState();
+  const now = new Date();
+  const today = todayDateString(now);
+  const dueProblems = selectDueProblems(state, now);
+  const dailyRemainingProblems = selectDailyRemainingProblems(state, now);
+  const timestamp = now.toISOString();
+
+  if (state.settings.reminders.enabled && dailyRemainingProblems.length > 0 && shouldSendDailyNotification(state, today)) {
+    try {
+      await notifyDailyPlan(dailyRemainingProblems, state.settings.locale);
+      state = markDailyNotificationSent(state, today, timestamp);
+      await setState(state);
+    } catch (error) {
+      console.warn('Failed to create daily review notification.', error);
+    }
+  }
+
+  const weeklySummary = selectWeeklySummaryStats(state);
+  if (shouldSendWeeklySummary(state, today, weeklySummary)) {
+    const attemptTimestamp = new Date().toISOString();
+    try {
+      await sendWeeklySummaryEmail(weeklySummary, dueProblems, state.settings.emailWebhook, state.settings.locale);
+      const nextState = markWeeklySummarySent(
+        {
+          ...state,
+          settings: {
+            ...state.settings,
+            emailWebhook: {
+              ...state.settings.emailWebhook,
+              lastSentAt: attemptTimestamp,
+              lastError: undefined
+            }
+          }
+        },
+        today,
+        attemptTimestamp
+      );
+      await setState(nextState);
+      state = nextState;
+    } catch (error) {
+      const nextState = markEmailFailure(
+        {
+          ...state,
+          settings: {
+            ...state.settings,
+            emailWebhook: {
+              ...state.settings.emailWebhook,
+              lastError: error instanceof Error ? error.message : String(error)
+            }
+          }
+        },
+        'weekly-summary',
+        error,
+        attemptTimestamp
+      );
+      await setState(nextState);
+      state = nextState;
+    }
+  }
+
+  return dueProblems;
+}
+
+async function sendTestEmail(): Promise<void> {
+  let state = await getState();
+  const dueProblems = selectDueProblems(state);
+  const summary = selectWeeklySummaryStats(state);
+  if (summary.totalProblems === 0) {
+    throw new Error('Add at least one problem before sending a test email.');
+  }
+  const today = todayDateString();
+  const timestamp = new Date().toISOString();
+
+  try {
+    await sendWeeklySummaryEmail(summary, dueProblems, state.settings.emailWebhook, state.settings.locale);
+    state = markWeeklySummarySent(
+      {
+        ...state,
+        settings: {
+          ...state.settings,
+          emailWebhook: {
+            ...state.settings.emailWebhook,
+            lastSentAt: timestamp,
+            lastError: undefined
+          }
+        }
+      },
+      today,
+      timestamp
+    );
+    await setState(state);
+  } catch (error) {
+    state = markEmailFailure(
+      {
+        ...state,
+        settings: {
+          ...state.settings,
+          emailWebhook: {
+            ...state.settings.emailWebhook,
+            lastError: error instanceof Error ? error.message : String(error)
+          }
+        }
+      },
+        'weekly-summary',
+        error,
+        timestamp
+      );
+    await setState(state);
+    throw error;
+  }
+}
+
+async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> {
+  if (request.type === 'UPSERT_ACCEPTED_REVIEW') {
+    const nextState = await enqueueReviewWrite(() => updateState((state) => {
+      const problemId = `${request.payload.identity.platform}:${request.payload.identity.titleSlug}`;
+      
+      // Find last log for this problem to support same-day rollback
+      const problemLogs = Object.values(state.reviewLogsById)
+        .filter(l => l.problemId === problemId)
+        .sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
+      const lastLog = problemLogs[0];
+
+      const result = applyReview(
+        state.problemsById[problemId],
+        request.payload.identity,
+        request.payload.rating,
+        request.payload.source,
+        state.settings.reviewPolicy,
+        new Date(),
+        lastLog
+      );
+
+      return {
+        ...state,
+        problemsById: {
+          ...state.problemsById,
+          [result.problem.id]: result.problem
+        },
+        reviewLogsById: {
+          ...state.reviewLogsById,
+          [result.log.id]: result.log
+        }
+      };
+    }));
+
+    return { ok: true, data: nextState };
+  }
+
+  if (request.type === 'GET_DAILY_PLAN') {
+    const state = await getState();
+    
+    // Create a map of problemId -> lastLog for UI preview rollback support
+    const lastLogsByProblemId: Record<string, ReviewLog> = {};
+    Object.values(state.reviewLogsById).forEach(log => {
+      const existing = lastLogsByProblemId[log.problemId];
+      if (!existing || log.reviewedAt > existing.reviewedAt) {
+        lastLogsByProblemId[log.problemId] = log;
+      }
+    });
+
+    return {
+      ok: true,
+      data: {
+        state,
+        dueProblems: selectDueProblems(state),
+        dailyRemainingProblems: selectDailyRemainingProblems(state),
+        completedTodayProblems: selectTodayCompletedProblems(state),
+        allProblems: Object.values(state.problemsById).filter(p => !p.archived).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+        stats: selectReviewStats(state),
+        lastLogsByProblemId
+      }
+    };
+  }
+
+  if (request.type === 'SAVE_NOTE') {
+    const note = await saveNote(request.payload.problemId, request.payload.markdown);
+    return { ok: true, data: note };
+  }
+
+  if (request.type === 'OPEN_PROBLEM' || request.type === 'OPEN_URL') {
+    await chrome.tabs.create({ url: request.payload.url });
+    return { ok: true };
+  }
+
+  if (request.type === 'SEND_TEST_EMAIL') {
+    await sendTestEmail();
+    return { ok: true };
+  }
+
+  if (request.type === 'SEND_TEST_NOTIFICATION') {
+    const state = await getState();
+    return { ok: true, data: await notifyTest(state.settings.locale) };
+  }
+
+  if (request.type === 'CHECK_REMINDERS') {
+    return { ok: true, data: await runReminderCheck() };
+  }
+
+  if (request.type === 'PREVIEW_IMPORT') {
+    const state = await getState();
+    return { ok: true, data: previewImportState(state, request.payload.input) };
+  }
+
+  if (request.type === 'IMPORT_STATE_CONFIRMED') {
+    const state = await importState(request.payload.input);
+    await scheduleDailyAlarm(state.settings);
+    return { ok: true, data: state };
+  }
+
+  if (request.type === 'RESET_TO_TODAY') {
+    const nextState = await updateState((state) => {
+      const problem = state.problemsById[request.payload.problemId];
+      if (!problem) return state;
+
+      return {
+        ...state,
+        problemsById: {
+          ...state.problemsById,
+          [problem.id]: {
+            ...problem,
+            nextReviewAt: new Date().toISOString(),
+            lastReviewedAt: undefined, // 核心：清除今日已复习标记
+            updatedAt: new Date().toISOString()
+          }
+        }
+      };
+    });
+    return { ok: true, data: nextState };
+  }
+
+  if (request.type === 'ARCHIVE_PROBLEM') {
+    const nextState = await updateState((state) => {
+      const problem = state.problemsById[request.payload.problemId];
+      if (!problem) return state;
+      return {
+        ...state,
+        problemsById: {
+          ...state.problemsById,
+          [problem.id]: {
+            ...problem,
+            archived: true,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      };
+    });
+    return { ok: true, data: nextState };
+  }
+
+  return { ok: false, error: 'Unknown request.' };
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  getState()
+    .then((state) => scheduleDailyAlarm(state.settings))
+    .catch(console.error);
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  getState()
+    .then((state) => {
+      scheduleDailyAlarm(state.settings);
+      // 启动时检查是否需要补发周报
+      runReminderCheck().catch(console.error);
+    })
+    .catch(console.error);
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (isDailyAlarm(alarm.name)) {
+    runReminderCheck().catch(console.error);
+  }
+});
+
+chrome.runtime.onMessage.addListener((request: RuntimeRequest, _sender, sendResponse) => {
+  handleMessage(request)
+    .then(sendResponse)
+    .catch((error) => {
+      const response: RuntimeResponse = {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+      sendResponse(response);
+    });
+  return true;
+});
