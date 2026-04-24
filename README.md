@@ -42,6 +42,8 @@
 - [从 Release 安装](#从-release-安装)
 - [功能预览](#功能预览)
 - [核心功能](#核心功能)
+- [使用流程](#使用流程)
+- [手动验收清单](#手动验收清单)
 - [项目结构](#项目结构)
 - [Roadmap](#roadmap)
 - [常见问题](#常见问题)
@@ -77,17 +79,30 @@
 | **导入预览** | JSON 备份导入前可预览题目、笔记数及版本冲突，确保数据安全 |
 | **安装诊断** | 设置页内置健康检查面板，实时监控自动弹窗和提醒投递状态 |
 
+### 使用流程
+
+1. **刷题**: 像往常一样在 LeetCode 提交代码。
+2. **评分**: 当获得 `Accepted` 结果时，页面会自动弹出评分面板。根据你的掌握情况选择“轻松/一般/困难/没思路”。
+3. **复习**: 点击浏览器右上角的扩展图标（Popup），在“今日复习”列表中查看并完成到期的题目。
+4. **笔记**: 在复习或刷题时，点击“笔记”按钮即可在侧边栏使用 Markdown 记录核心思路。
+
+### 手动验收清单
+
+- 在 LeetCode 提交一份 Accepted 代码并确认弹出评分框。
+- 打开扩展 Popup，确认题目进入复习列表，并查看统计面板。
+- 在 Popup 中完成一次到期复习并编辑 Markdown 笔记。
+- 在 Options 中确认健康检查面板显示正常。
+- 导出一份 JSON 备份，导入时确认预览摘要正确，再执行恢复。
+- 配置邮件提醒并在至少有一道题的情况下发送测试邮件，确认收到可视化周报。
+
 ### 项目结构
 
 ```text
-crush_leetcode/   Chrome 扩展源码
-  src/background  后台 service worker、提醒去重和可视化周报逻辑
-  src/content     LeetCode 页面注入、AC 检测和悬浮交互
-  src/popup       每日复习弹窗、统计看板 UI
-  src/options     设置页、健康检查、导入预览、邮件配置
-  src/shared      调度算法、存储层、选择器和共享类型
-
-vercel/           后端邮件代发服务 (Serverless Functions)
+src/background   后台 service worker、提醒去重和可视化周报逻辑
+src/content      LeetCode 页面注入、AC 检测和悬浮交互
+src/popup        每日复习弹窗、统计看板 UI
+src/options      设置页、健康检查、导入预览、邮件配置
+src/shared       调度算法、存储层、选择器和共享类型
 ```
 
 ### Roadmap
@@ -125,8 +140,9 @@ vercel/           后端邮件代发服务 (Serverless Functions)
 - [How To Use](#how-to-use)
 - [Preview](#preview)
 - [Core Features](#core-features)
-- [Project Structure](#project-structure-1)
-- [Roadmap](#roadmap-1)
+- [Review Flow](#review-flow)
+- [Manual QA Checklist](#manual-qa-checklist)
+- [Roadmap](#roadmap)
 - [FAQ](#faq)
 - [Support This Project](#support-this-project)
 
