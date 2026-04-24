@@ -43,15 +43,26 @@ function createWeeklySummaryPayload(
 }
 
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<void> {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body)
-  });
+  console.log(`[EmailWebhook] Posting to ${url}...`);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`Email webhook failed: ${response.status} ${text}`.trim());
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      console.error(`[EmailWebhook] Server returned ${response.status}: ${text}`);
+      throw new Error(`Email webhook failed: ${response.status} ${text}`.trim());
+    }
+    console.log('[EmailWebhook] Successfully sent.');
+  } catch (error) {
+    console.error('[EmailWebhook] Fetch error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Network error or CORS block: Failed to fetch. Please check your internet connection and verify the mailer service is up.');
+    }
+    throw error;
   }
 }
 
@@ -196,7 +207,7 @@ export async function sendWeeklySummaryEmail(
       acceptedProblemsThisWeekCount: payload.acceptedProblemsThisWeekCount,
       dailyReviewPoints: payload.dailyReviewPoints,
       topOverdueProblems: payload.topOverdueProblems,
-      eventId: `weekly-summary|${payload.dailyReviewPoints.at(-1)?.date ?? new Date().toISOString().slice(0, 10)}`
+      eventId: `weekly-summary|${payload.dailyReviewPoints[payload.dailyReviewPoints.length - 1]?.date ?? new Date().toISOString().slice(0, 10)}`
     }
   );
 }

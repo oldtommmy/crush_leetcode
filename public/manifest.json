@@ -13,15 +13,14 @@
   "host_permissions": [
     "https://leetcode.com/*",
     "https://leetcode.cn/*",
-    "https://api.emailjs.com/*",
-    "https://api.resend.com/*"
+    "https://crush-leetcode-official-mailer.vercel.app/*"
   ],
   "background": {
     "service_worker": "assets/background.js",
     "type": "module"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.emailjs.com https://api.resend.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://crush-leetcode-official-mailer.vercel.app"
   },
   "action": {
     "default_title": "Crush LeetCode",
