@@ -151,6 +151,43 @@ describe('review selectors', () => {
     });
   });
 
+  it('excludes archived problems from last 7 days review stats', () => {
+    const active = createProblem({
+      id: 'leetcode:two-sum',
+      titleSlug: 'two-sum',
+      title: 'Two Sum',
+      url: 'https://leetcode.com/problems/two-sum/'
+    });
+    const archived = createProblem({
+      id: 'leetcode:add-two-numbers',
+      titleSlug: 'add-two-numbers',
+      title: 'Add Two Numbers',
+      url: 'https://leetcode.com/problems/add-two-numbers/',
+      archived: true
+    });
+
+    const state = createState({
+      problemsById: {
+        [active.id]: active,
+        [archived.id]: archived
+      },
+      reviewLogsById: {
+        review_1: createReviewLog({
+          id: 'review_1',
+          problemId: active.id,
+          reviewedAt: '2026-04-21T08:00:00.000Z'
+        }),
+        review_2: createReviewLog({
+          id: 'review_2',
+          problemId: archived.id,
+          reviewedAt: '2026-04-21T09:00:00.000Z'
+        })
+      }
+    });
+
+    expect(selectReviewStats(state, new Date('2026-04-21T10:00:00.000Z')).reviewedLast7DaysCount).toBe(1);
+  });
+
   it('computes weekly summary stats and daily review bars', () => {
     const reviewed = createProblem({
       id: 'leetcode:two-sum',
@@ -209,5 +246,45 @@ describe('review selectors', () => {
       { date: '2026-04-20', label: '04-20', reviewCount: 2 },
       { date: '2026-04-21', label: '04-21', reviewCount: 1 }
     ]);
+  });
+
+  it('excludes archived problems from weekly summary review logs', () => {
+    const active = createProblem({
+      id: 'leetcode:two-sum',
+      titleSlug: 'two-sum',
+      title: 'Two Sum',
+      url: 'https://leetcode.com/problems/two-sum/'
+    });
+    const archived = createProblem({
+      id: 'leetcode:add-two-numbers',
+      titleSlug: 'add-two-numbers',
+      title: 'Add Two Numbers',
+      url: 'https://leetcode.com/problems/add-two-numbers/',
+      archived: true
+    });
+
+    const state = createState({
+      problemsById: {
+        [active.id]: active,
+        [archived.id]: archived
+      },
+      reviewLogsById: {
+        review_1: createReviewLog({
+          id: 'review_1',
+          problemId: active.id,
+          reviewedAt: '2026-04-21T08:00:00.000Z'
+        }),
+        review_2: createReviewLog({
+          id: 'review_2',
+          problemId: archived.id,
+          reviewedAt: '2026-04-21T09:00:00.000Z'
+        })
+      }
+    });
+
+    const summary = selectWeeklySummaryStats(state, new Date('2026-04-21T10:00:00.000Z'));
+    expect(summary.totalProblems).toBe(1);
+    expect(summary.reviewedProblemsThisWeekCount).toBe(1);
+    expect(summary.dailyReviewPoints.at(-1)?.reviewCount).toBe(1);
   });
 });

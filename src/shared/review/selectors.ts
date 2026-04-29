@@ -71,6 +71,7 @@ export function selectTodayCompletedProblems(state: ExtensionStorageState, nowIn
 export function selectReviewStats(state: ExtensionStorageState, nowInput: Date | string = new Date()): ReviewStats {
   const now = typeof nowInput === 'string' ? new Date(nowInput) : nowInput;
   const problems = Object.values(state.problemsById).filter((problem) => !problem.archived);
+  const activeProblemIds = new Set(problems.map((problem) => problem.id));
   const dueProblems = selectDueProblems(state, now);
   const completedToday = selectTodayCompletedProblems(state, now);
   
@@ -80,7 +81,7 @@ export function selectReviewStats(state: ExtensionStorageState, nowInput: Date |
 
   const reviewedLast7DaysProblemIds = new Set(
     Object.values(state.reviewLogsById)
-      .filter((log) => new Date(log.reviewedAt).getTime() >= sevenDaysAgo.getTime())
+      .filter((log) => activeProblemIds.has(log.problemId) && new Date(log.reviewedAt).getTime() >= sevenDaysAgo.getTime())
       .map((log) => log.problemId)
   );
 
@@ -97,6 +98,7 @@ export function selectWeeklySummaryStats(state: ExtensionStorageState, nowInput:
   const now = typeof nowInput === 'string' ? new Date(nowInput) : nowInput;
   const dueProblems = selectDueProblems(state, now);
   const problems = Object.values(state.problemsById).filter((problem) => !problem.archived);
+  const activeProblemIds = new Set(problems.map((problem) => problem.id));
   const reviewLogs = Object.values(state.reviewLogsById);
 
   const start = new Date(now);
@@ -112,6 +114,10 @@ export function selectWeeklySummaryStats(state: ExtensionStorageState, nowInput:
 
   const reviewedProblemIds = new Set<string>();
   for (const log of reviewLogs) {
+    if (!activeProblemIds.has(log.problemId)) {
+      continue;
+    }
+
     const reviewedAt = new Date(log.reviewedAt);
     if (reviewedAt.getTime() < start.getTime()) {
       continue;
