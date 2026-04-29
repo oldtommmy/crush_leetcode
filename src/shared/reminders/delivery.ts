@@ -50,13 +50,14 @@ export function shouldSendWeeklySummary(
   if (
     !state.settings.reminders.enabled ||
     !state.settings.reminders.notifyOverdue ||
-    !state.settings.emailWebhook.enabled
+    !state.settings.emailWebhook.enabled ||
+    !state.settings.emailWebhook.toEmail?.trim()
   ) {
     return false;
   }
 
-  // 最近7天没有刷题，不发周报（避免用户未刷题期也发送）
-  if (summary.reviewedProblemsThisWeekCount === 0) {
+  // 最近 7 天没有新增 AC，不发周报，避免用户未刷题期也被打扰。
+  if (summary.acceptedProblemsThisWeekCount === 0) {
     return false;
   }
 
@@ -65,7 +66,7 @@ export function shouldSendWeeklySummary(
     return true;
   }
 
-  // 距离上次发送超过7天，且有刷题记录，则补发
+  // 距离上次发送超过 7 天，且有刷题记录，则补发。
   return daysBetween(lastWeeklySummarySentDate, today) >= 7;
 }
 

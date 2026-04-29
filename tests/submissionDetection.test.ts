@@ -50,4 +50,21 @@ describe('submission detection', () => {
 
     expect(shouldNotify).toBe(true);
   });
+
+  it('detects accepted status inside nested GraphQL-style wrappers', () => {
+    const submittedIds = new Set<string>();
+    inspectSubmissionResponse(
+      'https://leetcode.com/problems/two-sum/submit/',
+      { data: { submitCode: { submissionId: 'abc' } } },
+      submittedIds
+    );
+
+    const shouldNotify = inspectSubmissionResponse(
+      'https://leetcode.com/submissions/detail/abc/check/',
+      { data: { submission: { statusDisplay: 'Accepted' } } },
+      submittedIds
+    );
+
+    expect(shouldNotify).toBe(true);
+  });
 });

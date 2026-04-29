@@ -5,6 +5,9 @@ type MessageKey =
   | 'acceptedSubtitle'
   | 'ratingHint'
   | 'dailyPlan'
+  | 'dailyGoal'
+  | 'queuedReviews'
+  | 'noProblemsRecorded'
   | 'noTasks'
   | 'notes'
   | 'save'
@@ -115,7 +118,10 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     acceptedTitle: 'Nice solve. How did it feel?',
     acceptedSubtitle: 'Crush LeetCode will schedule your next review.',
     ratingHint: 'Pick "Stuck" if you needed hints, looked at the solution, or could not rebuild it yourself.',
-    dailyPlan: 'Daily Plan',
+    dailyPlan: 'Today',
+    dailyGoal: 'Daily Goal',
+    queuedReviews: 'more queued',
+    noProblemsRecorded: 'No problems recorded yet.',
     noTasks: 'No reviews due today.',
     notes: 'Notes',
     save: 'Save',
@@ -134,7 +140,7 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     testEmail: 'Send test email',
     tagline: 'LeetCode Spaced Repetition',
     proTip: 'Pro Tip',
-    proTipDesc: 'Consistent review is the key to long-term memory. Try to complete your daily plan every morning!',
+    proTipDesc: 'Consistent review is the key to long-term memory. Try to complete your daily review every morning!',
     notePlaceholder: 'Write your thoughts here...',
     languageDesc: 'Change the UI language',
     autoPopupDesc: 'Show rating modal after finishing a problem',
@@ -218,14 +224,17 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     removeProblem: 'Remove problem',
     removeConfirm: 'Remove this problem from your library? Notes and history will be hidden with it.',
     testNotification: 'Send test notification',
-    dailyCompleteTitle: 'Daily plan complete',
+    dailyCompleteTitle: 'Daily goal complete',
     dailyCompleteClose: 'Nice'
   },
   'zh-CN': {
     acceptedTitle: '这题拿下了，感觉如何？',
     acceptedSubtitle: 'Crush LeetCode 会安排下一次复习。',
     ratingHint: '如果你需要提示、看了题解，或者没法自己复现思路，就选“没思路”。',
-    dailyPlan: '今日计划',
+    dailyPlan: '今日复习',
+    dailyGoal: '今日目标',
+    queuedReviews: '题排在后面',
+    noProblemsRecorded: '还没有记录题目。',
     noTasks: '今天没有到期复习。',
     notes: '笔记',
     save: '保存',
@@ -244,7 +253,7 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     testEmail: '发送测试邮件',
     tagline: '力扣间隔复习助手',
     proTip: 'Pro Tip',
-    proTipDesc: '持续复习是长期记忆的关键。尝试每天早上完成你的今日计划吧！',
+    proTipDesc: '持续复习是长期记忆的关键。尝试每天早上完成你的今日复习吧！',
     notePlaceholder: '写下你的想法 (Markdown)...',
     languageDesc: '更改界面显示语言',
     autoPopupDesc: '做完题后自动弹出评分对话框',
@@ -328,7 +337,7 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     removeProblem: '移除题目',
     removeConfirm: '要把这道题从题库里移除吗？相关笔记和历史记录会一起从列表中隐藏。',
     testNotification: '发送测试通知',
-    dailyCompleteTitle: '今日计划完成',
+    dailyCompleteTitle: '今日目标完成',
     dailyCompleteClose: '收到'
   }
 };

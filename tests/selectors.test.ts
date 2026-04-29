@@ -106,6 +106,51 @@ describe('review selectors', () => {
     ]);
   });
 
+  it('limits daily remaining problems without changing due problem ordering', () => {
+    const mostUrgent = createProblem({
+      id: 'leetcode:two-sum',
+      titleSlug: 'two-sum',
+      title: 'Two Sum',
+      url: 'https://leetcode.com/problems/two-sum/',
+      nextReviewAt: '2026-04-18',
+      stability: 1,
+      lastReviewAt: '2026-04-18T08:00:00.000Z'
+    });
+    const second = createProblem({
+      id: 'leetcode:add-two-numbers',
+      titleSlug: 'add-two-numbers',
+      title: 'Add Two Numbers',
+      url: 'https://leetcode.com/problems/add-two-numbers/',
+      nextReviewAt: '2026-04-19',
+      stability: 2,
+      lastReviewAt: '2026-04-19T08:00:00.000Z'
+    });
+    const deferred = createProblem({
+      id: 'leetcode:lru-cache',
+      titleSlug: 'lru-cache',
+      title: 'LRU Cache',
+      url: 'https://leetcode.com/problems/lru-cache/',
+      nextReviewAt: '2026-04-20',
+      stability: 3,
+      lastReviewAt: '2026-04-20T08:00:00.000Z'
+    });
+
+    const state = createState({
+      problemsById: {
+        [deferred.id]: deferred,
+        [second.id]: second,
+        [mostUrgent.id]: mostUrgent
+      }
+    });
+
+    expect(selectDueProblems(state, new Date('2026-04-21T10:00:00.000Z'))).toHaveLength(3);
+    expect(selectDailyRemainingProblems(state, new Date('2026-04-21T10:00:00.000Z'), 2).map((problem) => problem.id)).toEqual([
+      mostUrgent.id,
+      second.id
+    ]);
+    expect(selectDailyRemainingProblems(state, new Date('2026-04-21T10:00:00.000Z'), 0)).toEqual([]);
+  });
+
   it('computes aggregate review stats', () => {
     const due = createProblem({
       id: 'leetcode:two-sum',
@@ -194,6 +239,9 @@ describe('review selectors', () => {
       titleSlug: 'two-sum',
       title: 'Two Sum',
       url: 'https://leetcode.com/problems/two-sum/',
+      difficulty: 'Medium',
+      tags: ['Array', 'Hash Table'],
+      stability: 18,
       nextReviewAt: '2026-04-19',
       lastAcceptedAt: '2026-04-20T08:00:00.000Z'
     });
@@ -202,6 +250,9 @@ describe('review selectors', () => {
       titleSlug: 'add-two-numbers',
       title: 'Add Two Numbers',
       url: 'https://leetcode.com/problems/add-two-numbers/',
+      difficulty: 'Hard',
+      tags: ['Graph', 'Hash Table'],
+      stability: 4,
       nextReviewAt: '2026-04-25',
       lastAcceptedAt: '2026-04-21T08:00:00.000Z'
     });
@@ -245,6 +296,25 @@ describe('review selectors', () => {
       { date: '2026-04-19', label: '04-19', reviewCount: 0 },
       { date: '2026-04-20', label: '04-20', reviewCount: 2 },
       { date: '2026-04-21', label: '04-21', reviewCount: 1 }
+    ]);
+
+    const summary = selectWeeklySummaryStats(state, new Date('2026-04-21T10:00:00.000Z'));
+    expect(summary.difficultyBreakdown).toEqual([
+      { difficulty: 'Medium', count: 1 },
+      { difficulty: 'Hard', count: 1 }
+    ]);
+    expect(summary.topTags).toEqual([
+      { tag: 'Hash Table', count: 2 },
+      { tag: 'Array', count: 1 },
+      { tag: 'Graph', count: 1 }
+    ]);
+    expect(summary.acceptedProblemCards?.map((problem) => problem.id)).toEqual([
+      accepted.id,
+      reviewed.id
+    ]);
+    expect(summary.reviewedProblemCards?.map((problem) => problem.id)).toEqual([
+      reviewed.id,
+      accepted.id
     ]);
   });
 

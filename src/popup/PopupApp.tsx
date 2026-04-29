@@ -8,6 +8,7 @@ interface DailyPlanResponse {
   state: ExtensionStorageState;
   dueProblems: DueProblem[];
   dailyRemainingProblems: DueProblem[];
+  totalDailyRemainingCount: number;
   completedTodayProblems: Problem[];
   allProblems: Problem[];
   stats: ReviewStats;
@@ -32,6 +33,18 @@ export function PopupApp() {
   }, []);
 
   useEffect(() => load(), [load]);
+
+  const updateDailyReviewLimit = useCallback((limit: number) => {
+    chrome.runtime
+      .sendMessage({ type: 'UPDATE_DAILY_REVIEW_LIMIT', payload: { limit } } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse<ExtensionStorageState>) => {
+        if (!response.ok) {
+          throw new Error(response.error ?? 'Failed to update daily review limit.');
+        }
+        load();
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  }, [load]);
 
   const locale = data?.state.settings.locale ?? 'en';
   const problems = data ? Object.values(data.state.problemsById).filter((problem) => !problem.archived) : [];
@@ -73,10 +86,13 @@ export function PopupApp() {
         {data ? (
           <DailyPlan
             dueProblems={data.dailyRemainingProblems}
+            totalDailyRemainingCount={data.totalDailyRemainingCount}
             completedTodayProblems={data.completedTodayProblems}
             allProblems={data.allProblems}
             stats={data.stats}
             locale={locale}
+            dailyReviewLimit={data.state.settings.dailyReviewLimit}
+            onDailyReviewLimitChange={updateDailyReviewLimit}
             onChanged={load}
           />
         ) : null}

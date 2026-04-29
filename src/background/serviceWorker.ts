@@ -26,8 +26,17 @@ import {
   updateState
 } from '../shared/storage/chromeStorage';
 import type { DueProblem, ReviewLog, RuntimeRequest, RuntimeResponse } from '../shared/types';
+import { MAX_DAILY_REVIEW_LIMIT, MIN_DAILY_REVIEW_LIMIT } from '../shared/constants';
 
 let reviewWriteQueue: Promise<unknown> = Promise.resolve();
+
+function normalizeDailyReviewLimitInput(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return MIN_DAILY_REVIEW_LIMIT;
+  }
+
+  return Math.min(MAX_DAILY_REVIEW_LIMIT, Math.max(MIN_DAILY_REVIEW_LIMIT, Math.round(value)));
+}
 
 function enqueueReviewWrite<T>(task: () => Promise<T>): Promise<T> {
   const next = reviewWriteQueue.then(task, task);
@@ -40,7 +49,9 @@ async function runReminderCheck(): Promise<DueProblem[]> {
   const now = new Date();
   const today = todayDateString(now);
   const dueProblems = selectDueProblems(state, now);
-  const dailyRemainingProblems = selectDailyRemainingProblems(state, now);
+  const completedTodayProblems = selectTodayCompletedProblems(state, now);
+  const remainingGoalSlots = Math.max(0, state.settings.dailyReviewLimit - completedTodayProblems.length);
+  const dailyRemainingProblems = selectDailyRemainingProblems(state, now, remainingGoalSlots);
   const timestamp = now.toISOString();
 
   if (state.settings.reminders.enabled && dailyRemainingProblems.length > 0 && shouldSendDailyNotification(state, today)) {
@@ -106,11 +117,16 @@ async function sendTestEmail(): Promise<void> {
   if (summary.totalProblems === 0) {
     throw new Error('Add at least one problem before sending a test email.');
   }
+  if (!state.settings.emailWebhook.toEmail?.trim()) {
+    throw new Error('Set a recipient email before sending a test digest.');
+  }
   const today = todayDateString();
   const timestamp = new Date().toISOString();
 
   try {
-    await sendWeeklySummaryEmail(summary, dueProblems, state.settings.emailWebhook, state.settings.locale);
+    await sendWeeklySummaryEmail(summary, dueProblems, state.settings.emailWebhook, state.settings.locale, {
+      requireConfigured: true
+    });
     state = markWeeklySummarySent(
       {
         ...state,
@@ -187,6 +203,9 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
 
   if (request.type === 'GET_DAILY_PLAN') {
     const state = await getState();
+    const totalDailyRemainingProblems = selectDailyRemainingProblems(state);
+    const completedTodayProblems = selectTodayCompletedProblems(state);
+    const remainingGoalSlots = Math.max(0, state.settings.dailyReviewLimit - completedTodayProblems.length);
     
     // Create a map of problemId -> lastLog for UI preview rollback support
     const lastLogsByProblemId: Record<string, ReviewLog> = {};
@@ -202,13 +221,26 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
       data: {
         state,
         dueProblems: selectDueProblems(state),
-        dailyRemainingProblems: selectDailyRemainingProblems(state),
-        completedTodayProblems: selectTodayCompletedProblems(state),
+        dailyRemainingProblems: totalDailyRemainingProblems.slice(0, remainingGoalSlots),
+        totalDailyRemainingCount: totalDailyRemainingProblems.length,
+        completedTodayProblems,
         allProblems: Object.values(state.problemsById).filter(p => !p.archived).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
         stats: selectReviewStats(state),
         lastLogsByProblemId
       }
     };
+  }
+
+  if (request.type === 'UPDATE_DAILY_REVIEW_LIMIT') {
+    const limit = normalizeDailyReviewLimitInput(request.payload.limit);
+    const nextState = await updateState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        dailyReviewLimit: limit
+      }
+    }));
+    return { ok: true, data: nextState };
   }
 
   if (request.type === 'SAVE_NOTE') {

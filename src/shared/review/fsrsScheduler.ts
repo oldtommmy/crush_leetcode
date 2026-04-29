@@ -1,5 +1,11 @@
-import { fsrs, Card, Rating, createEmptyCard, State, ReviewLog as FSRSLog } from 'ts-fsrs';
+import { fsrs, Card, Rating, createEmptyCard, State, ReviewLog as FSRSLog, RecordLogItem, Grade } from 'ts-fsrs';
+import { FSRS_MAX_INTERVAL_DAYS } from '../constants';
 import { FSRSState, Problem, ReviewRating, ReviewLog } from '../types';
+
+export interface FSRSScheduleResult {
+  card: Card;
+  log: FSRSLog;
+}
 
 /**
  * Maps our custom ReviewRating to ts-fsrs Rating
@@ -44,11 +50,11 @@ export function logToFSRSLog(log: ReviewLog): FSRSLog {
   return {
     rating: mapRating(log.rating),
     state: log.state as number as State,
-    due: new Date(log.generatedDueAt),
+    due: new Date(log.fsrsDueAt ?? log.previousNextReviewAt ?? log.generatedDueAt),
     stability: log.stability,
     difficulty: log.difficultyScore,
     elapsed_days: log.elapsedDays,
-    last_elapsed_days: 0, // Not strictly needed for rollback
+    last_elapsed_days: log.lastElapsedDays ?? 0,
     scheduled_days: log.scheduledDays,
     review: new Date(log.reviewedAt),
     learning_steps: log.learning_steps,
@@ -60,24 +66,48 @@ export function logToFSRSLog(log: ReviewLog): FSRSLog {
  */
 export class FSRSScheduler {
   private static f = fsrs({
-    enable_short_term: true
+    enable_short_term: true,
+    maximum_interval: FSRS_MAX_INTERVAL_DAYS
   });
 
   private static initialReviewScheduler = fsrs({
-    enable_short_term: false
+    enable_short_term: false,
+    maximum_interval: FSRS_MAX_INTERVAL_DAYS
   });
+
+  private static clampInterval(card: Card, now: Date): Card {
+    if (card.scheduled_days <= FSRS_MAX_INTERVAL_DAYS) {
+      return card;
+    }
+
+    const due = new Date(now);
+    due.setDate(due.getDate() + FSRS_MAX_INTERVAL_DAYS);
+
+    return {
+      ...card,
+      due,
+      scheduled_days: FSRS_MAX_INTERVAL_DAYS
+    };
+  }
 
   /**
    * Calculates next state for a problem given a rating
    */
-  public static next(problem: Problem | undefined, rating: ReviewRating, now = new Date()): Card {
+  public static schedule(problem: Problem | undefined, rating: ReviewRating, now = new Date()): FSRSScheduleResult {
     const card: Card = problem ? problemToCard(problem) : createEmptyCard(now);
     const fsrsRating = mapRating(rating);
     const scheduler = problem ? this.f : this.initialReviewScheduler;
     const schedulingCards = scheduler.repeat(card, now);
-    
-    const item = (schedulingCards as any)[fsrsRating];
-    return { ...item.card };
+
+    const item = schedulingCards[fsrsRating as Grade] as RecordLogItem;
+    return {
+      card: this.clampInterval({ ...item.card }, now),
+      log: { ...item.log }
+    };
+  }
+
+  public static next(problem: Problem | undefined, rating: ReviewRating, now = new Date()): Card {
+    return this.schedule(problem, rating, now).card;
   }
 
   /**

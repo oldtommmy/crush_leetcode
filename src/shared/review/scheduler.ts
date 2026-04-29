@@ -63,7 +63,7 @@ export function calculateNextReview(
     }
   }
 
-  const fsrsCard = FSRSScheduler.next(baseProblem, rating, now);
+  const { card: fsrsCard } = FSRSScheduler.schedule(baseProblem, rating, now);
   return {
     nextStage: fsrsCard.state as number,
     intervalDays: fsrsCard.scheduled_days,
@@ -115,8 +115,8 @@ export function applyReview(
     isCorrection = true;
   }
 
-  // Calculate new state using FSRS
-  const fsrsCard = FSRSScheduler.next(baseForCalculation, rating, now);
+  // Calculate new state using FSRS.
+  const { card: fsrsCard, log: fsrsLog } = FSRSScheduler.schedule(baseForCalculation, rating, now);
   
   const previousStage = baseForCalculation?.reviewStage ?? 0;
   const previousNextReviewAt = baseForCalculation?.nextReviewAt;
@@ -166,15 +166,17 @@ export function applyReview(
     source,
     rating,
     
-    // FSRS Log Fields
-    stability: fsrsCard.stability,
-    difficultyScore: fsrsCard.difficulty,
-    elapsedDays: fsrsCard.elapsed_days,
-    scheduledDays: fsrsCard.scheduled_days,
+    // FSRS rollback fields: state before this review.
+    fsrsDueAt: fsrsLog.due.toISOString(),
+    stability: fsrsLog.stability,
+    difficultyScore: fsrsLog.difficulty,
+    elapsedDays: fsrsLog.elapsed_days,
+    lastElapsedDays: fsrsLog.last_elapsed_days,
+    scheduledDays: fsrsLog.scheduled_days,
     generatedDueAt: fsrsCard.due.toISOString(),
-    lapses: fsrsCard.lapses,
-    learning_steps: (fsrsCard as any).learning_steps ?? 0,
-    state: fsrsCard.state as number as FSRSState,
+    lapses: baseForCalculation?.lapses ?? 0,
+    learning_steps: fsrsLog.learning_steps ?? 0,
+    state: fsrsLog.state as number as FSRSState,
 
     // Legacy fields
     previousReviewStage: previousStage,

@@ -3,6 +3,10 @@ import type { ExtensionStorageState, ReviewPolicy, UserSettings } from './types'
 export const STORAGE_KEY = 'quizRecallState';
 export const STORAGE_VERSION = 1;
 export const DAILY_ALARM_NAME = 'quizRecall.dailyReminder';
+export const DEFAULT_DAILY_REVIEW_LIMIT = 10;
+export const MIN_DAILY_REVIEW_LIMIT = 1;
+export const MAX_DAILY_REVIEW_LIMIT = 50;
+export const FSRS_MAX_INTERVAL_DAYS = 365;
 
 export const DEFAULT_REVIEW_POLICY: ReviewPolicy = {
   baseIntervalsDays: [1, 2, 4, 7, 14, 30, 60, 120],
@@ -39,7 +43,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   emailWebhook: {
     enabled: false
   },
-  themeMode: 'system'
+  themeMode: 'system',
+  dailyReviewLimit: DEFAULT_DAILY_REVIEW_LIMIT
 };
 
 export const DEFAULT_STATE: ExtensionStorageState = {

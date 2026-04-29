@@ -1,10 +1,15 @@
 const ACCEPTED_PATTERNS = [/^Accepted$/i, /^通过$/];
 const SUBMIT_PATTERNS = [/Submit/i, /提交/, /提交代码/];
 const RECENT_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
+const OBSERVER_DEBOUNCE_MS = 150;
 
 function hasAcceptedText(): boolean {
-  const visibleText = document.body.innerText;
-  return ACCEPTED_PATTERNS.some((pattern) => pattern.test(visibleText)) || /\bAccepted\b/.test(visibleText);
+  const visibleText = document.body.textContent ?? '';
+  const exactLineMatch = visibleText
+    .split(/\n+/)
+    .some((line) => ACCEPTED_PATTERNS.some((pattern) => pattern.test(line.trim())));
+
+  return exactLineMatch || /\bAccepted\b/i.test(visibleText) || visibleText.includes('通过');
 }
 
 function isSubmitElement(target: EventTarget | null): boolean {
@@ -22,6 +27,7 @@ function isSubmitElement(target: EventTarget | null): boolean {
 export function observeAcceptedSubmission(onAccepted: () => void): () => void {
   let lastSubmitAt = 0;
   let lastAcceptedAt = 0;
+  let notifyTimer: ReturnType<typeof setTimeout> | undefined;
 
   const handleClick = (event: MouseEvent) => {
     if (isSubmitElement(event.target)) {
@@ -43,7 +49,14 @@ export function observeAcceptedSubmission(onAccepted: () => void): () => void {
     }
   };
 
-  const observer = new MutationObserver(() => maybeNotify());
+  const scheduleMaybeNotify = () => {
+    if (notifyTimer) {
+      clearTimeout(notifyTimer);
+    }
+    notifyTimer = setTimeout(maybeNotify, OBSERVER_DEBOUNCE_MS);
+  };
+
+  const observer = new MutationObserver(scheduleMaybeNotify);
   document.addEventListener('click', handleClick, true);
   observer.observe(document.body, {
     childList: true,
@@ -52,6 +65,9 @@ export function observeAcceptedSubmission(onAccepted: () => void): () => void {
   });
 
   return () => {
+    if (notifyTimer) {
+      clearTimeout(notifyTimer);
+    }
     document.removeEventListener('click', handleClick, true);
     observer.disconnect();
   };

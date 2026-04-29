@@ -39,7 +39,8 @@ describe('reminder delivery', () => {
           overdueThresholdDays: 3
         },
         emailWebhook: {
-          enabled: true
+          enabled: true,
+          toEmail: 'review@example.com'
         }
       },
       metadata: {
@@ -65,7 +66,8 @@ describe('reminder delivery', () => {
           overdueThresholdDays: 3
         },
         emailWebhook: {
-          enabled: true
+          enabled: true,
+          toEmail: 'review@example.com'
         }
       },
       metadata: {
@@ -95,7 +97,43 @@ describe('reminder delivery', () => {
     ).toBe(false);
   });
 
-  it('does not send weekly summary when no problems were reviewed this week', () => {
+  it('sends weekly summary when problems were accepted even without reviews this week', () => {
+    const state = createState({
+      settings: {
+        ...createState().settings,
+        reminders: {
+          enabled: true,
+          dailyReminderTime: '10:00',
+          notifyOverdue: true,
+          overdueThresholdDays: 3
+        },
+        emailWebhook: {
+          enabled: true,
+          toEmail: 'review@example.com'
+        }
+      },
+      metadata: {
+        ...createState().metadata,
+        reminderDelivery: normalizeReminderDelivery({
+          lastWeeklySummarySentDate: '2026-04-14',
+          emailByProblemId: {}
+        })
+      }
+    });
+
+    const acceptedOnlySummary: WeeklySummaryStats = {
+      totalProblems: 5,
+      dueCount: 2,
+      overdueCount: 1,
+      reviewedProblemsThisWeekCount: 0,
+      acceptedProblemsThisWeekCount: 1,
+      dailyReviewPoints: []
+    };
+
+    expect(shouldSendWeeklySummary(state, '2026-04-21', acceptedOnlySummary)).toBe(true);
+  });
+
+  it('does not send weekly summary when recipient email is missing', () => {
     const state = createState({
       settings: {
         ...createState().settings,
@@ -118,16 +156,43 @@ describe('reminder delivery', () => {
       }
     });
 
+    expect(shouldSendWeeklySummary(state, '2026-04-21', weeklySummary)).toBe(false);
+  });
+
+  it('does not send weekly summary when no problems were accepted this week', () => {
+    const state = createState({
+      settings: {
+        ...createState().settings,
+        reminders: {
+          enabled: true,
+          dailyReminderTime: '10:00',
+          notifyOverdue: true,
+          overdueThresholdDays: 3
+        },
+        emailWebhook: {
+          enabled: true,
+          toEmail: 'review@example.com'
+        }
+      },
+      metadata: {
+        ...createState().metadata,
+        reminderDelivery: normalizeReminderDelivery({
+          lastWeeklySummarySentDate: '2026-04-14',
+          emailByProblemId: {}
+        })
+      }
+    });
+
     const noActivitySummary: WeeklySummaryStats = {
       totalProblems: 5,
       dueCount: 2,
       overdueCount: 1,
-      reviewedProblemsThisWeekCount: 0,
+      reviewedProblemsThisWeekCount: 3,
       acceptedProblemsThisWeekCount: 0,
       dailyReviewPoints: []
     };
 
-    // 超过7天但没刷题，不发
+    // 超过 7 天但没有新增 AC，不发。
     expect(shouldSendWeeklySummary(state, '2026-04-21', noActivitySummary)).toBe(false);
   });
 

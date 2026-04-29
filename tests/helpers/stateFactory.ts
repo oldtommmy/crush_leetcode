@@ -50,9 +50,11 @@ export function createReviewLog(overrides: Partial<ReviewLog> & Pick<ReviewLog, 
     rating: 'normal',
     
     // FSRS Defaults for Log
+    fsrsDueAt: '2026-04-21T10:00:00.000Z',
     stability: 1,
     difficultyScore: 5,
     elapsedDays: 0,
+    lastElapsedDays: 0,
     scheduledDays: 0,
     generatedDueAt: '2026-04-22T10:00:00.000Z',
     lapses: 0,

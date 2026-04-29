@@ -1,4 +1,4 @@
-const acceptedPattern = /accepted|通过/i;
+const acceptedPattern = /^(accepted|通过)$/i;
 
 export function containsAccepted(value: unknown, depth = 0): boolean {
   if (!value || depth > 5) {
@@ -6,7 +6,7 @@ export function containsAccepted(value: unknown, depth = 0): boolean {
   }
 
   if (typeof value === 'string') {
-    return acceptedPattern.test(value);
+    return acceptedPattern.test(value.trim());
   }
 
   if (typeof value === 'number') {
@@ -20,7 +20,12 @@ export function containsAccepted(value: unknown, depth = 0): boolean {
   if (typeof value === 'object') {
     return Object.entries(value as Record<string, unknown>).some(([key, nestedValue]) => {
       const interestingKey = /status|state|result|submission|message|code/i.test(key);
-      return interestingKey && containsAccepted(nestedValue, depth + 1);
+      if (interestingKey && containsAccepted(nestedValue, depth + 1)) {
+        return true;
+      }
+
+      const wrapperKey = /data|payload|submit|check|question/i.test(key);
+      return wrapperKey && containsAccepted(nestedValue, depth + 1);
     });
   }
 

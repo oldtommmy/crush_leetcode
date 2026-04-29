@@ -1,4 +1,10 @@
-import { DEFAULT_STATE, STORAGE_KEY } from '../constants';
+import {
+  DEFAULT_DAILY_REVIEW_LIMIT,
+  DEFAULT_STATE,
+  MAX_DAILY_REVIEW_LIMIT,
+  MIN_DAILY_REVIEW_LIMIT,
+  STORAGE_KEY
+} from '../constants';
 import { problemIdFor } from '../review/scheduler';
 import { FSRSScheduler } from '../review/fsrsScheduler';
 import { normalizeReminderDelivery } from '../reminders/delivery';
@@ -17,6 +23,49 @@ import { EmailWebhookSettings } from '../types';
 
 export const DEBUG_SCENARIO_PRESETS: DebugScenarioPreset[] = ['empty', 'mixed', 'overdue', 'import_preview'];
 const DEBUG_TOOLS_ENABLED = true;
+export const MAX_NOTE_MARKDOWN_BYTES = 200 * 1024;
+const DEFAULT_LOCAL_STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
+const STORAGE_QUOTA_HEADROOM_RATIO = 0.9;
+
+let stateWriteQueue: Promise<unknown> = Promise.resolve();
+
+function byteLength(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
+
+function assertNoteSize(markdown: string): void {
+  const size = byteLength(markdown);
+  if (size > MAX_NOTE_MARKDOWN_BYTES) {
+    throw new Error(`Note is too large (${Math.ceil(size / 1024)}KB). Keep each note under ${MAX_NOTE_MARKDOWN_BYTES / 1024}KB.`);
+  }
+}
+
+function localStorageQuotaBytes(): number {
+  return (chrome.storage.local as { QUOTA_BYTES?: number }).QUOTA_BYTES ?? DEFAULT_LOCAL_STORAGE_QUOTA_BYTES;
+}
+
+function assertStateFitsStorage(state: ExtensionStorageState): void {
+  const payload = {
+    [STORAGE_KEY]: {
+      ...state,
+      metadata: {
+        ...state.metadata,
+        storageBackend: 'local'
+      }
+    }
+  };
+  const size = byteLength(JSON.stringify(payload));
+  const softLimit = Math.floor(localStorageQuotaBytes() * STORAGE_QUOTA_HEADROOM_RATIO);
+  if (size > softLimit) {
+    throw new Error(`Storage is near capacity (${Math.ceil(size / 1024)}KB). Export a backup and reduce large notes before saving more data.`);
+  }
+}
+
+function enqueueStateWrite<T>(task: () => Promise<T>): Promise<T> {
+  const next = stateWriteQueue.then(task, task);
+  stateWriteQueue = next.catch(() => undefined);
+  return next;
+}
 
 function isValidDateInput(value: unknown): value is string {
   return typeof value === 'string' && Number.isFinite(new Date(value).getTime());
@@ -32,6 +81,14 @@ function normalizePositiveNumber(value: unknown, fallback: number): number {
 
 function normalizeNonNegativeNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function normalizeDailyReviewLimit(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_DAILY_REVIEW_LIMIT;
+  }
+
+  return Math.min(MAX_DAILY_REVIEW_LIMIT, Math.max(MIN_DAILY_REVIEW_LIMIT, Math.round(value)));
 }
 
 function normalizeState(value: unknown, fallback: FSRSState): FSRSState {
@@ -85,12 +142,14 @@ function normalizeReviewLog(log: any): ReviewLog {
   return {
     ...log,
     reviewedAt,
+    fsrsDueAt: normalizeDate(log.fsrsDueAt ?? log.previousNextReviewAt ?? log.generatedDueAt ?? log.nextReviewAt, reviewedAt),
     generatedDueAt,
     nextReviewAt: normalizeDate(log.nextReviewAt ?? generatedDueAt, generatedDueAt),
     createdAt: normalizeDate(log.createdAt, reviewedAt),
     stability: normalizePositiveNumber(log.stability, 1),
     difficultyScore: normalizePositiveNumber(log.difficultyScore, 5),
     elapsedDays: normalizeNonNegativeNumber(log.elapsedDays, 0),
+    lastElapsedDays: normalizeNonNegativeNumber(log.lastElapsedDays, 0),
     scheduledDays: normalizeNonNegativeNumber(log.scheduledDays, log.nextIntervalDays ?? 0),
     lapses: normalizeNonNegativeNumber(log.lapses, 0),
     learning_steps: normalizeNonNegativeNumber(log.learning_steps, 0),
@@ -459,7 +518,8 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
       emailWebhook: {
         ...DEFAULT_STATE.settings.emailWebhook,
         ...input?.settings?.emailWebhook
-      }
+      },
+      dailyReviewLimit: normalizeDailyReviewLimit(input?.settings?.dailyReviewLimit)
     },
     metadata: {
       ...DEFAULT_STATE.metadata,
@@ -480,7 +540,8 @@ export async function getState(): Promise<ExtensionStorageState> {
   return mergeState(rawState);
 }
 
-export async function setState(state: ExtensionStorageState): Promise<void> {
+async function writeStateNow(state: ExtensionStorageState): Promise<void> {
+  assertStateFitsStorage(state);
   await chrome.storage.local.set({
     [STORAGE_KEY]: {
       ...state,
@@ -492,16 +553,23 @@ export async function setState(state: ExtensionStorageState): Promise<void> {
   });
 }
 
+export async function setState(state: ExtensionStorageState): Promise<void> {
+  return enqueueStateWrite(() => writeStateNow(state));
+}
+
 export async function updateState(
   updater: (state: ExtensionStorageState) => ExtensionStorageState | Promise<ExtensionStorageState>
 ): Promise<ExtensionStorageState> {
-  const state = await getState();
-  const nextState = await updater(state);
-  await setState(nextState);
-  return nextState;
+  return enqueueStateWrite(async () => {
+    const state = await getState();
+    const nextState = await updater(state);
+    await writeStateNow(nextState);
+    return nextState;
+  });
 }
 
 export async function saveNote(problemId: string, markdown: string): Promise<ProblemNote> {
+  assertNoteSize(markdown);
   let savedNote: ProblemNote | undefined;
   await updateState((state) => {
     const timestamp = new Date().toISOString();

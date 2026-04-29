@@ -4,13 +4,17 @@ import { t } from '../../shared/i18n/messages';
 import { ProblemCard } from './ProblemCard';
 import { calculateRetrievability, getMasteryTier } from '../../shared/review/selectors';
 import { todayDateString } from '../../shared/date';
+import { MAX_DAILY_REVIEW_LIMIT, MIN_DAILY_REVIEW_LIMIT } from '../../shared/constants';
 
 interface DailyPlanProps {
   dueProblems: DueProblem[];
+  totalDailyRemainingCount: number;
   completedTodayProblems: Problem[];
   allProblems: Problem[];
   stats: ReviewStats;
   locale: Locale;
+  dailyReviewLimit: number;
+  onDailyReviewLimitChange: (limit: number) => void;
   onChanged: () => void;
 }
 
@@ -39,6 +43,18 @@ const encouragements: Record<Locale, Array<{ title: string; body: string }>> = {
     {
       title: 'No TLE',
       body: 'You did not time out today. The judge is mildly impressed.'
+    },
+    {
+      title: 'Green CI',
+      body: 'All review checks passed. Your memory pipeline is ready to deploy.'
+    },
+    {
+      title: 'Garbage Collected',
+      body: 'Old confusion was collected successfully. Heap looks healthier now.'
+    },
+    {
+      title: 'Branch Merged',
+      body: 'Today\'s review branch merged cleanly into main memory. No conflicts.'
     }
   ],
   'zh-CN': [
@@ -65,18 +81,42 @@ const encouragements: Record<Locale, Array<{ title: string; body: string }>> = {
     {
       title: '没有超时',
       body: '你今天没 TLE，甚至还顺手优化了自己。'
+    },
+    {
+      title: 'CI 全绿',
+      body: '今日复习检查全部通过，可以放心部署到长期记忆。'
+    },
+    {
+      title: '垃圾回收完成',
+      body: '旧的困惑已被 GC，脑内堆内存看起来清爽多了。'
+    },
+    {
+      title: '分支合并成功',
+      body: '今日复习分支已无冲突合入 main memory。'
     }
   ]
 };
 
-export function DailyPlan({ dueProblems, completedTodayProblems, allProblems, stats, locale, onChanged }: DailyPlanProps) {
+export function DailyPlan({
+  dueProblems,
+  totalDailyRemainingCount,
+  completedTodayProblems,
+  allProblems,
+  stats,
+  locale,
+  dailyReviewLimit,
+  onDailyReviewLimitChange,
+  onChanged
+}: DailyPlanProps) {
   const [view, setView] = useState<'daily' | 'all'>('daily');
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const remainingCount = dueProblems.length;
+  const deferredCount = Math.max(0, totalDailyRemainingCount - remainingCount);
   const completedCount = completedTodayProblems.length;
-  const totalToday = remainingCount + completedCount;
-  const progress = totalToday > 0 ? (completedCount / totalToday) * 100 : 0;
+  const totalToday = Math.min(dailyReviewLimit, completedCount + totalDailyRemainingCount);
+  const goalCompletedCount = Math.min(completedCount, totalToday);
+  const progress = totalToday > 0 ? (goalCompletedCount / totalToday) * 100 : 0;
   const encouragement = useMemo(() => {
     const pool = encouragements[locale];
     const index = Math.floor(Math.random() * pool.length);
@@ -84,7 +124,7 @@ export function DailyPlan({ dueProblems, completedTodayProblems, allProblems, st
   }, [locale, totalToday]);
 
   useEffect(() => {
-    if (totalToday === 0 || remainingCount !== 0 || completedCount === 0) {
+    if (totalToday === 0 || remainingCount !== 0 || goalCompletedCount === 0) {
       return;
     }
 
@@ -95,7 +135,7 @@ export function DailyPlan({ dueProblems, completedTodayProblems, allProblems, st
 
     sessionStorage.setItem(key, '1');
     setShowCompleteModal(true);
-  }, [completedCount, remainingCount, totalToday]);
+  }, [goalCompletedCount, remainingCount, totalToday]);
 
   const openLeetCode = () => {
     const url = locale === 'zh-CN' ? 'https://leetcode.cn/problemset/' : 'https://leetcode.com/problemset/';
@@ -105,6 +145,10 @@ export function DailyPlan({ dueProblems, completedTodayProblems, allProblems, st
   const openOptions = () => {
     chrome.runtime.openOptionsPage();
   };
+
+  const deferredLabel = locale === 'zh-CN'
+    ? `还有 ${deferredCount} ${t(locale, 'queuedReviews')}`
+    : `${deferredCount} ${t(locale, 'queuedReviews')}`;
 
   const problemToDue = (problem: Problem): DueProblem => {
     return {
@@ -164,7 +208,7 @@ export function DailyPlan({ dueProblems, completedTodayProblems, allProblems, st
            <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-3xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
-                {completedCount} <span className="text-base font-bold text-neutral-400">/ {totalToday}</span>
+                {goalCompletedCount} <span className="text-base font-bold text-neutral-400">/ {totalToday}</span>
               </h2>
               <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">{t(locale, 'statsCompleted')}</p>
             </div>
@@ -204,6 +248,34 @@ export function DailyPlan({ dueProblems, completedTodayProblems, allProblems, st
       </div>
 
       {/* View Tabs */}
+      <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-[#262626]">
+        <div>
+          <p className="text-xs font-black text-neutral-900 dark:text-neutral-100">{t(locale, 'dailyGoal')}</p>
+          <p className="mt-0.5 text-[10px] font-medium text-neutral-500">
+            {deferredCount > 0 ? deferredLabel : t(locale, 'dailyPlan')}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-sm font-black text-neutral-700 transition-all hover:bg-neutral-200 disabled:opacity-40 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            disabled={dailyReviewLimit <= MIN_DAILY_REVIEW_LIMIT}
+            onClick={() => onDailyReviewLimitChange(dailyReviewLimit - 1)}
+          >
+            -
+          </button>
+          <span className="min-w-8 text-center text-lg font-black text-amber-500">{dailyReviewLimit}</span>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-sm font-black text-white transition-all hover:bg-black disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+            disabled={dailyReviewLimit >= MAX_DAILY_REVIEW_LIMIT}
+            onClick={() => onDailyReviewLimitChange(dailyReviewLimit + 1)}
+          >
+            +
+          </button>
+        </div>
+      </div>
+
       <div className="flex p-1 bg-neutral-100 rounded-2xl dark:bg-neutral-800/50">
         <button
           onClick={() => setView('daily')}
@@ -273,7 +345,7 @@ export function DailyPlan({ dueProblems, completedTodayProblems, allProblems, st
         ) : (
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
              {allProblems.length === 0 && (
-               <p className="text-center text-xs text-neutral-500 py-8">No problems recorded yet.</p>
+               <p className="text-center text-xs text-neutral-500 py-8">{t(locale, 'noProblemsRecorded')}</p>
              )}
              {allProblems.map((problem) => (
                <ProblemCard 

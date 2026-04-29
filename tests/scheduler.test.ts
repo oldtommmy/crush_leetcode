@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_REVIEW_POLICY } from '../src/shared/constants';
+import { DEFAULT_REVIEW_POLICY, FSRS_MAX_INTERVAL_DAYS } from '../src/shared/constants';
 import { applyReview, calculateNextReview, problemIdFor } from '../src/shared/review/scheduler';
 import type { ProblemIdentity } from '../src/shared/types';
 import { FSRSState } from '../src/shared/types';
@@ -91,6 +91,37 @@ describe('scheduler', () => {
     expect(second.problem.reviewCount).toBe(first.problem.reviewCount);
     expect(second.log.id).toBe(first.log.id);
     expect(second.log.rating).toBe('too_easy');
+  });
+
+  it('corrects a later same-day review from the true previous FSRS state', () => {
+    const first = applyReview(undefined, identity, 'normal', 'accepted_modal', DEFAULT_REVIEW_POLICY, now);
+    const secondReviewAt = new Date(first.problem.nextReviewAt);
+    const second = applyReview(first.problem, identity, 'normal', 'daily_plan', DEFAULT_REVIEW_POLICY, secondReviewAt);
+    const corrected = applyReview(second.problem, identity, 'too_easy', 'daily_plan', DEFAULT_REVIEW_POLICY, secondReviewAt, second.log);
+    const expected = applyReview(first.problem, identity, 'too_easy', 'daily_plan', DEFAULT_REVIEW_POLICY, secondReviewAt);
+
+    expect(corrected.problem.reviewCount).toBe(second.problem.reviewCount);
+    expect(corrected.log.id).toBe(second.log.id);
+    expect(corrected.problem.nextReviewAt).toBe(expected.problem.nextReviewAt);
+    expect(corrected.problem.scheduledDays).toBe(expected.problem.scheduledDays);
+    expect(corrected.problem.state).toBe(expected.problem.state);
+    expect(corrected.problem.reps).toBe(expected.problem.reps);
+  });
+
+  it('caps repeated easy reviews to the configured maximum interval', () => {
+    let problem = applyReview(undefined, identity, 'too_easy', 'accepted_modal', DEFAULT_REVIEW_POLICY, now).problem;
+
+    for (let index = 0; index < 10; index += 1) {
+      expect(problem.scheduledDays).toBeLessThanOrEqual(FSRS_MAX_INTERVAL_DAYS);
+      problem = applyReview(
+        problem,
+        identity,
+        'too_easy',
+        'daily_plan',
+        DEFAULT_REVIEW_POLICY,
+        new Date(problem.nextReviewAt)
+      ).problem;
+    }
   });
 
   it('rejects same-day correction when the previous log is missing', () => {
