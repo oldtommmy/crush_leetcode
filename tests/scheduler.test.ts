@@ -26,10 +26,16 @@ describe('scheduler', () => {
     // Initial review (undefined problem)
     const result = calculateNextReview(undefined, 'normal', DEFAULT_REVIEW_POLICY, now);
 
-    expect(result.nextStage).toBe(FSRSState.Learning);
-    // Initial Learning interval in FSRS is typically 0 (meaning review today)
-    expect(result.intervalDays).toBeGreaterThanOrEqual(0);
-    expect(result.nextReviewAt).toContain('2026-04-21');
+    expect(result.nextStage).toBe(FSRSState.Review);
+    expect(result.intervalDays).toBe(3);
+    expect(result.nextReviewAt).toContain('2026-04-24');
+  });
+
+  it('uses day-level intervals for first accepted reviews', () => {
+    expect(calculateNextReview(undefined, 'no_clue', DEFAULT_REVIEW_POLICY, now).intervalDays).toBe(1);
+    expect(calculateNextReview(undefined, 'hard', DEFAULT_REVIEW_POLICY, now).intervalDays).toBe(2);
+    expect(calculateNextReview(undefined, 'normal', DEFAULT_REVIEW_POLICY, now).intervalDays).toBe(3);
+    expect(calculateNextReview(undefined, 'too_easy', DEFAULT_REVIEW_POLICY, now).intervalDays).toBe(8);
   });
 
   it('schedules no-clue reviews with Relearning state', () => {

@@ -43,20 +43,24 @@ export function calculateNextReview(
 
   // If already reviewed today, we should preview based on the state BEFORE that review
   if (existing && problemId && isSameDayLog(problemId, lastLog, now) && isSameLocalDate(existing.lastReviewedAt ?? '', now)) {
-    const rolledBackCard = FSRSScheduler.rollback(existing, lastLog);
-    // Create a temporary problem representing the state before today's review
-    baseProblem = {
-      ...existing,
-      nextReviewAt: rolledBackCard.due.toISOString(),
-      stability: rolledBackCard.stability,
-      difficultyScore: rolledBackCard.difficulty,
-      elapsedDays: rolledBackCard.elapsed_days,
-      scheduledDays: rolledBackCard.scheduled_days,
-      reps: rolledBackCard.reps,
-      lapses: rolledBackCard.lapses,
-      state: rolledBackCard.state as number as FSRSState,
-      lastReviewAt: rolledBackCard.last_review?.toISOString()
-    };
+    if (existing.reviewCount <= 1) {
+      baseProblem = undefined;
+    } else {
+      const rolledBackCard = FSRSScheduler.rollback(existing, lastLog);
+      // Create a temporary problem representing the state before today's review
+      baseProblem = {
+        ...existing,
+        nextReviewAt: rolledBackCard.due.toISOString(),
+        stability: rolledBackCard.stability,
+        difficultyScore: rolledBackCard.difficulty,
+        elapsedDays: rolledBackCard.elapsed_days,
+        scheduledDays: rolledBackCard.scheduled_days,
+        reps: rolledBackCard.reps,
+        lapses: rolledBackCard.lapses,
+        state: rolledBackCard.state as number as FSRSState,
+        lastReviewAt: rolledBackCard.last_review?.toISOString()
+      };
+    }
   }
 
   const fsrsCard = FSRSScheduler.next(baseProblem, rating, now);
@@ -89,21 +93,25 @@ export function applyReview(
     if (!isSameDayLog(problemId, lastLog, now)) {
       throw new Error('Cannot correct review without same-day log.');
     }
-    const rolledBackCard = FSRSScheduler.rollback(existing, lastLog);
-    baseForCalculation = {
-      ...existing,
-      nextReviewAt: rolledBackCard.due.toISOString(),
-      stability: rolledBackCard.stability,
-      difficultyScore: rolledBackCard.difficulty,
-      elapsedDays: rolledBackCard.elapsed_days,
-      scheduledDays: rolledBackCard.scheduled_days,
-      reps: rolledBackCard.reps,
-      lapses: rolledBackCard.lapses,
-      state: rolledBackCard.state as number as FSRSState,
-      lastReviewAt: rolledBackCard.last_review?.toISOString(),
-      // Decrement review count for the calculation (it will be incremented back)
-      reviewCount: Math.max(0, existing.reviewCount - 1)
-    };
+    if (existing.reviewCount <= 1) {
+      baseForCalculation = undefined;
+    } else {
+      const rolledBackCard = FSRSScheduler.rollback(existing, lastLog);
+      baseForCalculation = {
+        ...existing,
+        nextReviewAt: rolledBackCard.due.toISOString(),
+        stability: rolledBackCard.stability,
+        difficultyScore: rolledBackCard.difficulty,
+        elapsedDays: rolledBackCard.elapsed_days,
+        scheduledDays: rolledBackCard.scheduled_days,
+        reps: rolledBackCard.reps,
+        lapses: rolledBackCard.lapses,
+        state: rolledBackCard.state as number as FSRSState,
+        lastReviewAt: rolledBackCard.last_review?.toISOString(),
+        // Decrement review count for the calculation (it will be incremented back)
+        reviewCount: Math.max(0, existing.reviewCount - 1)
+      };
+    }
     isCorrection = true;
   }
 

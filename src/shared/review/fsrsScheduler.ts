@@ -63,13 +63,18 @@ export class FSRSScheduler {
     enable_short_term: true
   });
 
+  private static initialReviewScheduler = fsrs({
+    enable_short_term: false
+  });
+
   /**
    * Calculates next state for a problem given a rating
    */
   public static next(problem: Problem | undefined, rating: ReviewRating, now = new Date()): Card {
     const card: Card = problem ? problemToCard(problem) : createEmptyCard(now);
     const fsrsRating = mapRating(rating);
-    const schedulingCards = this.f.repeat(card, now);
+    const scheduler = problem ? this.f : this.initialReviewScheduler;
+    const schedulingCards = scheduler.repeat(card, now);
     
     const item = (schedulingCards as any)[fsrsRating];
     return { ...item.card };
