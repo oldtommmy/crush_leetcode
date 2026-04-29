@@ -9,19 +9,31 @@ interface WebhookSettingsProps {
   showTest: boolean;
 }
 
-export function WebhookSettings({ settings, onChange, onTest, showTest }: WebhookSettingsProps) {
+export function WebhookSettings({
+  settings,
+  onChange,
+  onTest,
+  showTest
+}: WebhookSettingsProps) {
   const locale: Locale = settings.locale;
   const email = settings.emailWebhook;
   const [showConfirm, setShowConfirm] = useState(false);
   const [inputEmail, setInputEmail] = useState(email.toEmail ?? '');
+  const [inputBetaCode, setInputBetaCode] = useState(email.betaAccessCode ?? '');
 
   useEffect(() => {
     setInputEmail(email.toEmail ?? '');
   }, [email.toEmail]);
 
+  useEffect(() => {
+    setInputBetaCode(email.betaAccessCode ?? '');
+  }, [email.betaAccessCode]);
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isValidEmail = !inputEmail || emailRegex.test(inputEmail);
   const hasChanged = inputEmail !== (email.toEmail ?? '');
+  const hasBetaCode = Boolean(email.betaAccessCode?.trim());
+  const betaCodeChanged = inputBetaCode.trim() !== (email.betaAccessCode ?? '');
 
   const updateEmail = (patch: Partial<typeof email>) => {
     onChange({
@@ -38,6 +50,15 @@ export function WebhookSettings({ settings, onChange, onTest, showTest }: Webhoo
     setShowConfirm(false);
   };
 
+  const handleSaveBetaCode = () => {
+    updateEmail({
+      betaAccessCode: inputBetaCode.trim() || undefined,
+      enabled: inputBetaCode.trim() ? email.enabled : false
+    });
+  };
+
+  const showOfficialControls = showTest || hasBetaCode;
+
   return (
     <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#262626]">
       <div className="mb-6 flex items-center justify-between">
@@ -48,22 +69,104 @@ export function WebhookSettings({ settings, onChange, onTest, showTest }: Webhoo
               <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
             </svg>
           </div>
-          <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100">{t(locale, 'officialDigest')}</h2>
+          <div>
+            <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100">{t(locale, 'officialDigest')}</h2>
+            <span
+              className={`mt-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider transition-all ${
+                showOfficialControls
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-orange-500/15 text-orange-700 dark:text-orange-300'
+              }`}
+            >
+              {showOfficialControls ? t(locale, 'configured') : t(locale, 'officialDigestBetaBadge')}
+            </span>
+          </div>
         </div>
-        <label className="relative inline-flex cursor-pointer items-center">
-          <input
-            type="checkbox"
-            className="peer sr-only"
-            checked={email.enabled}
-            onChange={(event) => updateEmail({ enabled: event.target.checked })}
-          />
-          <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-neutral-600 dark:bg-neutral-700"></div>
-        </label>
+        {showOfficialControls && (
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={email.enabled}
+              onChange={(event) => updateEmail({ enabled: event.target.checked })}
+            />
+            <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-neutral-600 dark:bg-neutral-700"></div>
+          </label>
+        )}
       </div>
 
-      <div className={`space-y-6 transition-opacity ${email.enabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+      {!showOfficialControls && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-orange-900 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-100">
+            <p className="font-bold">{t(locale, 'officialDigestBetaDesc')}</p>
+            <p className="mt-2 text-xs opacity-90">{t(locale, 'officialDigestBetaApply')}</p>
+            <p className="mt-2 text-xs opacity-80">{t(locale, 'officialDigestBetaUnlockHint')}</p>
+          </div>
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <label className="mb-2 block text-xs font-black text-neutral-800 dark:text-neutral-100">
+              {t(locale, 'officialDigestBetaCode')}
+            </label>
+            <div className="flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-medium transition-all focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/10 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
+                value={inputBetaCode}
+                onChange={(event) => setInputBetaCode(event.target.value)}
+                placeholder={locale === 'zh-CN' ? '输入确认邮件里的访问码' : 'Enter access code'}
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-orange-500 px-4 py-2 text-xs font-black text-white transition-all hover:bg-orange-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleSaveBetaCode}
+                disabled={!inputBetaCode.trim()}
+              >
+                {t(locale, 'saveBetaAccessCode')}
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <a
+              href="https://github.com/oldtommmy/crush_leetcode"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl bg-neutral-900 px-4 py-3 text-center text-xs font-black text-white transition-all hover:bg-black active:scale-[0.98] dark:bg-neutral-800 dark:hover:bg-neutral-700"
+            >
+              {t(locale, 'giveMeAStar')}
+            </a>
+            <a
+              href="mailto:tommychan@foxmail.com?subject=Crush%20LeetCode%20official%20digest%20beta"
+              className="rounded-xl border border-orange-200 bg-white px-4 py-3 text-center text-xs font-black text-orange-700 transition-all hover:border-orange-400 hover:bg-orange-50 active:scale-[0.98] dark:border-orange-500/20 dark:bg-neutral-900 dark:text-orange-300 dark:hover:bg-orange-500/10"
+            >
+              tommychan@foxmail.com
+            </a>
+          </div>
+        </div>
+      )}
+
+      {showOfficialControls && (
+      <div className={`space-y-6 transition-opacity ${email.enabled ? 'opacity-100' : 'opacity-60'}`}>
         <div className="rounded-xl bg-neutral-50 p-4 text-xs text-neutral-600 dark:bg-neutral-900/50 dark:text-neutral-300">
           {t(locale, 'weeklyDigestDesc')}
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-bold text-neutral-900 dark:text-neutral-100">{t(locale, 'officialDigestBetaCode')}</label>
+          <div className="flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm transition-all focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
+              value={inputBetaCode}
+              onChange={(event) => setInputBetaCode(event.target.value)}
+              placeholder={locale === 'zh-CN' ? '输入确认邮件里的访问码' : 'Enter access code'}
+            />
+            {betaCodeChanged && (
+              <button
+                type="button"
+                className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-amber-600 active:scale-95"
+                onClick={handleSaveBetaCode}
+              >
+                {locale === 'zh-CN' ? '保存' : 'Save'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div>
@@ -134,6 +237,7 @@ export function WebhookSettings({ settings, onChange, onTest, showTest }: Webhoo
           </button>
         )}
       </div>
+      )}
     </section>
   );
 }

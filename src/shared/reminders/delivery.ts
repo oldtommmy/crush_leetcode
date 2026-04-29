@@ -18,6 +18,7 @@ export function normalizeReminderDelivery(input?: Partial<ReminderDeliveryState>
   return {
     lastDailyNotificationDate: input?.lastDailyNotificationDate,
     lastWeeklySummarySentDate: input?.lastWeeklySummarySentDate,
+    lastWeeklyReportExportedDate: input?.lastWeeklyReportExportedDate,
     emailByProblemId
   };
 }
@@ -51,7 +52,8 @@ export function shouldSendWeeklySummary(
     !state.settings.reminders.enabled ||
     !state.settings.reminders.notifyOverdue ||
     !state.settings.emailWebhook.enabled ||
-    !state.settings.emailWebhook.toEmail?.trim()
+    !state.settings.emailWebhook.toEmail?.trim() ||
+    !state.settings.emailWebhook.betaAccessCode?.trim()
   ) {
     return false;
   }
@@ -68,6 +70,33 @@ export function shouldSendWeeklySummary(
 
   // 距离上次发送超过 7 天，且有刷题记录，则补发。
   return daysBetween(lastWeeklySummarySentDate, today) >= 7;
+}
+
+export function shouldExportWeeklyReport(
+  state: ExtensionStorageState,
+  today: string,
+  summary: WeeklySummaryStats
+): boolean {
+  if (!state.settings.reminders.enabled || !state.settings.reminders.weeklyReportExportEnabled) {
+    return false;
+  }
+
+  if (summary.totalProblems === 0) {
+    return false;
+  }
+
+  if (summary.acceptedProblemsThisWeekCount === 0 && summary.reviewedProblemsThisWeekCount === 0) {
+    return false;
+  }
+
+  const lastWeeklyReportExportedDate = normalizeReminderDelivery(
+    state.metadata.reminderDelivery
+  ).lastWeeklyReportExportedDate;
+  if (!lastWeeklyReportExportedDate) {
+    return true;
+  }
+
+  return daysBetween(lastWeeklyReportExportedDate, today) >= 7;
 }
 
 export function markDailyNotificationSent(
@@ -101,6 +130,24 @@ export function markWeeklySummarySent(
       reminderDelivery: {
         ...normalizeReminderDelivery(state.metadata.reminderDelivery),
         lastWeeklySummarySentDate: today
+      }
+    }
+  };
+}
+
+export function markWeeklyReportExported(
+  state: ExtensionStorageState,
+  today: string,
+  timestamp: string
+): ExtensionStorageState {
+  return {
+    ...state,
+    metadata: {
+      ...state.metadata,
+      lastNotificationAt: timestamp,
+      reminderDelivery: {
+        ...normalizeReminderDelivery(state.metadata.reminderDelivery),
+        lastWeeklyReportExportedDate: today
       }
     }
   };

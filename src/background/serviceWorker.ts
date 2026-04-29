@@ -1,6 +1,7 @@
 import { isDailyAlarm, scheduleDailyAlarm } from './alarms';
 import { sendWeeklySummaryEmail } from './emailWebhook';
-import { notifyDailyPlan, notifyTest } from './notifications';
+import { notifyDailyPlan, notifyTest, notifyWeeklyReportExported } from './notifications';
+import { exportWeeklyReportHtml } from './weeklyReportExport';
 import { todayDateString } from '../shared/date';
 import { applyReview } from '../shared/review/scheduler';
 import {
@@ -14,8 +15,10 @@ import {
   markDailyNotificationSent,
   markEmailFailure,
   markWeeklySummarySent,
+  markWeeklyReportExported,
   shouldSendDailyNotification,
-  shouldSendWeeklySummary
+  shouldSendWeeklySummary,
+  shouldExportWeeklyReport
 } from '../shared/reminders/delivery';
 import {
   getState,
@@ -107,7 +110,39 @@ async function runReminderCheck(): Promise<DueProblem[]> {
     }
   }
 
+  if (shouldExportWeeklyReport(state, today, weeklySummary)) {
+    const exportTimestamp = new Date().toISOString();
+    try {
+      const result = await exportWeeklyReportHtml(weeklySummary, dueProblems, state.settings.locale, now);
+      const nextState = markWeeklyReportExported(state, today, exportTimestamp);
+      await setState(nextState);
+      state = nextState;
+      try {
+        await notifyWeeklyReportExported(result.filename, state.settings.locale);
+      } catch (notificationError) {
+        console.warn('Weekly report exported, but notification failed.', notificationError);
+      }
+    } catch (error) {
+      console.warn('Failed to export weekly report.', error);
+    }
+  }
+
   return dueProblems;
+}
+
+async function exportWeeklyReport(): Promise<{ filename: string; downloadId: number }> {
+  let state = await getState();
+  const now = new Date();
+  const dueProblems = selectDueProblems(state, now);
+  const summary = selectWeeklySummaryStats(state, now);
+  if (summary.totalProblems === 0) {
+    throw new Error('Add at least one problem before exporting a weekly report.');
+  }
+
+  const result = await exportWeeklyReportHtml(summary, dueProblems, state.settings.locale, now);
+  state = markWeeklyReportExported(state, todayDateString(now), now.toISOString());
+  await setState(state);
+  return result;
 }
 
 async function sendTestEmail(): Promise<void> {
@@ -119,6 +154,9 @@ async function sendTestEmail(): Promise<void> {
   }
   if (!state.settings.emailWebhook.toEmail?.trim()) {
     throw new Error('Set a recipient email before sending a test digest.');
+  }
+  if (!state.settings.emailWebhook.betaAccessCode?.trim()) {
+    throw new Error('Enter the official digest beta access code from the confirmation email.');
   }
   const today = todayDateString();
   const timestamp = new Date().toISOString();
@@ -256,6 +294,10 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
   if (request.type === 'SEND_TEST_EMAIL') {
     await sendTestEmail();
     return { ok: true };
+  }
+
+  if (request.type === 'EXPORT_WEEKLY_REPORT') {
+    return { ok: true, data: await exportWeeklyReport() };
   }
 
   if (request.type === 'SEND_TEST_NOTIFICATION') {

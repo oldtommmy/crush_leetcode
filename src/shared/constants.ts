@@ -38,7 +38,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enabled: true,
     dailyReminderTime: '10:00',
     notifyOverdue: true,
-    overdueThresholdDays: 3
+    overdueThresholdDays: 3,
+    weeklyReportExportEnabled: false
   },
   emailWebhook: {
     enabled: false
@@ -56,6 +57,7 @@ export const DEFAULT_STATE: ExtensionStorageState = {
   metadata: {
     storageBackend: 'local',
     reminderDelivery: {
+      lastWeeklyReportExportedDate: undefined,
       emailByProblemId: {}
     }
   }

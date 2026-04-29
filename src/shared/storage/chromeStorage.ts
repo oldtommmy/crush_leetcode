@@ -513,11 +513,13 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
       reviewPolicy: policy,
       reminders: {
         ...DEFAULT_STATE.settings.reminders,
-        ...input?.settings?.reminders
+        ...input?.settings?.reminders,
+        weeklyReportExportEnabled: Boolean(input?.settings?.reminders?.weeklyReportExportEnabled)
       },
       emailWebhook: {
         ...DEFAULT_STATE.settings.emailWebhook,
-        ...input?.settings?.emailWebhook
+        ...input?.settings?.emailWebhook,
+        betaAccessCode: input?.settings?.emailWebhook?.betaAccessCode?.trim() || undefined
       },
       dailyReviewLimit: normalizeDailyReviewLimit(input?.settings?.dailyReviewLimit)
     },

@@ -31,6 +31,16 @@ export async function notifyTest(locale: Locale): Promise<NotificationSendResult
   );
 }
 
+export async function notifyWeeklyReportExported(filename: string, locale: Locale): Promise<NotificationSendResult> {
+  return createNotification(
+    `quizRecall.weeklyReport.${Date.now()}`,
+    locale === 'zh-CN' ? 'Crush LeetCode 本周周报' : 'Crush LeetCode weekly report',
+    locale === 'zh-CN'
+      ? `本地周报已生成：${filename}。文件会保存到 Chrome 默认下载目录。`
+      : `Local report exported: ${filename}. It was saved to Chrome's default Downloads folder.`
+  );
+}
+
 async function getNotificationPermissionLevel(): Promise<'granted' | 'denied'> {
   return new Promise((resolve, reject) => {
     chrome.notifications.getPermissionLevel((level) => {

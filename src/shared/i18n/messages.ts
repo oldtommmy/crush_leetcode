@@ -48,6 +48,18 @@ type MessageKey =
   | 'weeklyDigestDesc'
   | 'weeklyDigestFields'
   | 'sendTestDigest'
+  | 'officialDigestBetaBadge'
+  | 'officialDigestBetaDesc'
+  | 'officialDigestBetaApply'
+  | 'officialDigestBetaUnlockHint'
+  | 'officialDigestBetaCode'
+  | 'saveBetaAccessCode'
+  | 'localWeeklyReport'
+  | 'localWeeklyReportDesc'
+  | 'autoWeeklyReportExport'
+  | 'autoWeeklyReportExportDesc'
+  | 'exportWeeklyReport'
+  | 'weeklyReportExported'
   | 'deliveryEndpoint'
   | 'sharedSecret'
   | 'daysLater'
@@ -162,6 +174,18 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     weeklyDigestDesc: 'Send one weekly summary email with progress, overdue count, and a 7-day chart.',
     weeklyDigestFields: 'Weekly digest fields',
     sendTestDigest: 'Send test digest',
+    officialDigestBetaBadge: 'Private beta',
+    officialDigestBetaDesc: 'The official email digest is currently in private beta to prevent mail service abuse. For now, use Local weekly report by default.',
+    officialDigestBetaApply: 'Want access? Star the GitHub repo, then email tommychan@foxmail.com with your GitHub username and recipient email.',
+    officialDigestBetaUnlockHint: 'After beta approval, enter the access code from the confirmation email.',
+    officialDigestBetaCode: 'Beta access code',
+    saveBetaAccessCode: 'Save access code',
+    localWeeklyReport: 'Local weekly report',
+    localWeeklyReportDesc: 'Generate an HTML weekly report locally. Chrome saves it to your default Downloads folder.',
+    autoWeeklyReportExport: 'Auto-generate weekly report',
+    autoWeeklyReportExportDesc: 'When the weekly cycle is due and you had activity, export the report during the daily reminder check.',
+    exportWeeklyReport: 'Export weekly report',
+    weeklyReportExported: 'Weekly report exported',
     deliveryEndpoint: 'Delivery endpoint',
     sharedSecret: 'Shared secret',
     daysLater: 'days later',
@@ -275,6 +299,18 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     weeklyDigestDesc: '每周发送一封汇总邮件，包含复习进度、逾期数量和最近 7 天趋势图。',
     weeklyDigestFields: '周报字段',
     sendTestDigest: '发送测试周报',
+    officialDigestBetaBadge: '内测中',
+    officialDigestBetaDesc: '官方邮件周报暂时处于内测阶段，用于控制邮件服务滥用风险。默认建议使用“本地周报”。',
+    officialDigestBetaApply: '想进入内测：先给 GitHub 项目点 Star，然后邮件联系 tommychan@foxmail.com，附上 GitHub 用户名和接收邮箱。',
+    officialDigestBetaUnlockHint: '收到内测确认后，在这里输入确认邮件里的访问码。',
+    officialDigestBetaCode: '内测访问码',
+    saveBetaAccessCode: '保存访问码',
+    localWeeklyReport: '本地周报',
+    localWeeklyReportDesc: '在本地生成 HTML 周报。Chrome 会保存到默认下载目录。',
+    autoWeeklyReportExport: '自动生成本地周报',
+    autoWeeklyReportExportDesc: '到达每周周期且本周有刷题/复习时，在每日提醒检查时自动导出周报。',
+    exportWeeklyReport: '导出本周周报',
+    weeklyReportExported: '本周周报已导出',
     deliveryEndpoint: '投递地址',
     sharedSecret: '共享密钥',
     daysLater: '天后',

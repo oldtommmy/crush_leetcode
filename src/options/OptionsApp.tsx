@@ -107,6 +107,26 @@ export function OptionsApp() {
       .catch((err) => setMessage({ text: err instanceof Error ? err.message : String(err), type: 'error' }));
   };
 
+  const exportWeeklyReport = () => {
+    const currentLocale = state?.settings.locale ?? 'en';
+    chrome.runtime.sendMessage({ type: 'EXPORT_WEEKLY_REPORT' } satisfies RuntimeRequest)
+      .then((res: RuntimeResponse<{ filename?: string }>) => {
+        if (res.ok) {
+          const filename = res.data?.filename;
+          setMessage({
+            text:
+              currentLocale === 'zh-CN'
+                ? `${t(currentLocale, 'weeklyReportExported')}${filename ? `：${filename}` : ''}`
+                : `${t(currentLocale, 'weeklyReportExported')}${filename ? `: ${filename}` : ''}`,
+            type: 'success'
+          });
+        } else {
+          throw new Error(res.error);
+        }
+      })
+      .catch((err) => setMessage({ text: err instanceof Error ? err.message : String(err), type: 'error' }));
+  };
+
   const toggleDebugMode = async () => {
     if (!state) return;
     const nextState = await updateState((latestState) => ({
@@ -192,7 +212,12 @@ export function OptionsApp() {
       <div className="mx-auto mt-8 max-w-4xl px-6">
         <div className="grid gap-8 md:grid-cols-[1fr_280px]">
           <div className="space-y-8">
-            <ReminderSettings settings={state.settings} onChange={saveSettings} onTestNotification={testNotification} />
+            <ReminderSettings
+              settings={state.settings}
+              onChange={saveSettings}
+              onTestNotification={testNotification}
+              onExportWeeklyReport={exportWeeklyReport}
+            />
             <WebhookSettings
               settings={state.settings}
               onChange={saveSettings}

@@ -5,9 +5,10 @@ interface ReminderSettingsProps {
   settings: UserSettings;
   onChange: (settings: UserSettings) => void;
   onTestNotification: () => void;
+  onExportWeeklyReport: () => void;
 }
 
-export function ReminderSettings({ settings, onChange, onTestNotification }: ReminderSettingsProps) {
+export function ReminderSettings({ settings, onChange, onTestNotification, onExportWeeklyReport }: ReminderSettingsProps) {
   const locale: Locale = settings.locale;
 
   return (
@@ -115,6 +116,53 @@ export function ReminderSettings({ settings, onChange, onTestNotification }: Rem
           >
             {t(locale, 'testNotification')}
           </button>
+
+          <div className="h-px bg-neutral-200/70 dark:bg-neutral-800" />
+
+          <div className="space-y-3 rounded-xl border border-orange-100 bg-orange-50 p-4 dark:border-orange-500/20 dark:bg-orange-500/10">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                  {t(locale, 'localWeeklyReport')}
+                </span>
+                <p className="text-xs leading-5 text-neutral-500">{t(locale, 'localWeeklyReportDesc')}</p>
+              </div>
+              <button
+                type="button"
+                className="shrink-0 rounded-xl bg-orange-500 px-3 py-2 text-xs font-black text-white transition-all hover:bg-orange-600 active:scale-[0.98]"
+                onClick={onExportWeeklyReport}
+              >
+                {t(locale, 'exportWeeklyReport')}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-neutral-800 dark:text-neutral-100">
+                  {t(locale, 'autoWeeklyReportExport')}
+                </span>
+                <p className="text-[11px] leading-5 text-neutral-500">{t(locale, 'autoWeeklyReportExportDesc')}</p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  className="peer sr-only"
+                  checked={settings.reminders.weeklyReportExportEnabled}
+                  disabled={!settings.reminders.enabled}
+                  onChange={(event) =>
+                    onChange({
+                      ...settings,
+                      reminders: {
+                        ...settings.reminders,
+                        weeklyReportExportEnabled: event.target.checked
+                      }
+                    })
+                  }
+                />
+                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:border-neutral-600 dark:bg-neutral-700"></div>
+              </label>
+            </div>
+          </div>
 
           <div className="rounded-xl border border-sky-100 bg-sky-50 p-3 text-xs leading-5 text-sky-800 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200">
             <div className="mb-1 font-bold">

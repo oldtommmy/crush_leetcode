@@ -3,9 +3,11 @@ import {
   markDailyNotificationSent,
   markEmailFailure,
   markWeeklySummarySent,
+  markWeeklyReportExported,
   normalizeReminderDelivery,
   shouldSendDailyNotification,
-  shouldSendWeeklySummary
+  shouldSendWeeklySummary,
+  shouldExportWeeklyReport
 } from '../src/shared/reminders/delivery';
 import { createState } from './helpers/stateFactory';
 import type { WeeklySummaryStats } from '../src/shared/types';
@@ -33,6 +35,7 @@ describe('reminder delivery', () => {
       settings: {
         ...createState().settings,
         reminders: {
+          ...createState().settings.reminders,
           enabled: true,
           dailyReminderTime: '10:00',
           notifyOverdue: true,
@@ -40,7 +43,8 @@ describe('reminder delivery', () => {
         },
         emailWebhook: {
           enabled: true,
-          toEmail: 'review@example.com'
+          toEmail: 'review@example.com',
+          betaAccessCode: 'signed-code'
         }
       },
       metadata: {
@@ -60,6 +64,7 @@ describe('reminder delivery', () => {
       settings: {
         ...createState().settings,
         reminders: {
+          ...createState().settings.reminders,
           enabled: true,
           dailyReminderTime: '10:00',
           notifyOverdue: true,
@@ -67,7 +72,8 @@ describe('reminder delivery', () => {
         },
         emailWebhook: {
           enabled: true,
-          toEmail: 'review@example.com'
+          toEmail: 'review@example.com',
+          betaAccessCode: 'signed-code'
         }
       },
       metadata: {
@@ -102,6 +108,7 @@ describe('reminder delivery', () => {
       settings: {
         ...createState().settings,
         reminders: {
+          ...createState().settings.reminders,
           enabled: true,
           dailyReminderTime: '10:00',
           notifyOverdue: true,
@@ -109,7 +116,8 @@ describe('reminder delivery', () => {
         },
         emailWebhook: {
           enabled: true,
-          toEmail: 'review@example.com'
+          toEmail: 'review@example.com',
+          betaAccessCode: 'signed-code'
         }
       },
       metadata: {
@@ -138,13 +146,41 @@ describe('reminder delivery', () => {
       settings: {
         ...createState().settings,
         reminders: {
+          ...createState().settings.reminders,
           enabled: true,
           dailyReminderTime: '10:00',
           notifyOverdue: true,
           overdueThresholdDays: 3
         },
         emailWebhook: {
-          enabled: true
+          enabled: true,
+          betaAccessCode: 'signed-code'
+        }
+      },
+      metadata: {
+        ...createState().metadata,
+        reminderDelivery: normalizeReminderDelivery({
+          lastWeeklySummarySentDate: '2026-04-14',
+          emailByProblemId: {}
+        })
+      }
+    });
+
+    expect(shouldSendWeeklySummary(state, '2026-04-21', weeklySummary)).toBe(false);
+  });
+
+  it('does not send weekly summary when beta access code is missing', () => {
+    const state = createState({
+      settings: {
+        ...createState().settings,
+        reminders: {
+          ...createState().settings.reminders,
+          enabled: true,
+          notifyOverdue: true
+        },
+        emailWebhook: {
+          enabled: true,
+          toEmail: 'review@example.com'
         }
       },
       metadata: {
@@ -164,6 +200,7 @@ describe('reminder delivery', () => {
       settings: {
         ...createState().settings,
         reminders: {
+          ...createState().settings.reminders,
           enabled: true,
           dailyReminderTime: '10:00',
           notifyOverdue: true,
@@ -171,7 +208,8 @@ describe('reminder delivery', () => {
         },
         emailWebhook: {
           enabled: true,
-          toEmail: 'review@example.com'
+          toEmail: 'review@example.com',
+          betaAccessCode: 'signed-code'
         }
       },
       metadata: {
@@ -196,6 +234,55 @@ describe('reminder delivery', () => {
     expect(shouldSendWeeklySummary(state, '2026-04-21', noActivitySummary)).toBe(false);
   });
 
+  it('exports local weekly report only when enabled and weekly activity exists', () => {
+    const state = createState({
+      settings: {
+        ...createState().settings,
+        reminders: {
+          ...createState().settings.reminders,
+          enabled: true,
+          weeklyReportExportEnabled: true
+        }
+      },
+      metadata: {
+        ...createState().metadata,
+        reminderDelivery: normalizeReminderDelivery({
+          lastWeeklyReportExportedDate: '2026-04-14',
+          emailByProblemId: {}
+        })
+      }
+    });
+
+    expect(shouldExportWeeklyReport(state, '2026-04-21', weeklySummary)).toBe(true);
+    expect(
+      shouldExportWeeklyReport(
+        {
+          ...state,
+          settings: {
+            ...state.settings,
+            reminders: {
+              ...state.settings.reminders,
+              weeklyReportExportEnabled: false
+            }
+          }
+        },
+        '2026-04-21',
+        weeklySummary
+      )
+    ).toBe(false);
+    expect(
+      shouldExportWeeklyReport(
+        state,
+        '2026-04-21',
+        {
+          ...weeklySummary,
+          reviewedProblemsThisWeekCount: 0,
+          acceptedProblemsThisWeekCount: 0
+        }
+      )
+    ).toBe(false);
+  });
+
   it('updates daily notification and weekly summary metadata', () => {
     const baseState = createState();
     const afterNotification = markDailyNotificationSent(baseState, '2026-04-21', '2026-04-21T10:00:00.000Z');
@@ -204,7 +291,10 @@ describe('reminder delivery', () => {
     const afterWeeklySummary = markWeeklySummarySent(afterNotification, '2026-04-21', '2026-04-21T10:05:00.000Z');
     expect(afterWeeklySummary.metadata.reminderDelivery?.lastWeeklySummarySentDate).toBe('2026-04-21');
 
-    const afterFailure = markEmailFailure(afterWeeklySummary, 'weekly-summary', new Error('timeout'), '2026-04-21T10:06:00.000Z');
+    const afterWeeklyReport = markWeeklyReportExported(afterWeeklySummary, '2026-04-21', '2026-04-21T10:06:00.000Z');
+    expect(afterWeeklyReport.metadata.reminderDelivery?.lastWeeklyReportExportedDate).toBe('2026-04-21');
+
+    const afterFailure = markEmailFailure(afterWeeklyReport, 'weekly-summary', new Error('timeout'), '2026-04-21T10:07:00.000Z');
     expect(afterFailure.metadata.reminderDelivery?.emailByProblemId['weekly-summary']).toMatchObject({
       failureCount: 1,
       lastError: 'timeout'

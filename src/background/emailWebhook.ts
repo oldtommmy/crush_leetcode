@@ -163,6 +163,11 @@ export async function sendWeeklySummaryEmail(
     return;
   }
 
+  const betaAccessCode = settings.betaAccessCode?.trim();
+  if (!betaAccessCode) {
+    throw new Error('Official digest beta access code is required.');
+  }
+
   const payload = createWeeklySummaryPayload(summary, dueProblems, settings, locale);
 
   await postJson(
@@ -182,6 +187,7 @@ export async function sendWeeklySummaryEmail(
       acceptedProblemCards: payload.acceptedProblemCards,
       reviewedProblemCards: payload.reviewedProblemCards,
       reviewQueueProblems: payload.reviewQueueProblems,
+      betaAccessCode,
       eventId: `weekly-summary|${payload.dailyReviewPoints[payload.dailyReviewPoints.length - 1]?.date ?? new Date().toISOString().slice(0, 10)}`
     }
   );

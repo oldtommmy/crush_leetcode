@@ -119,6 +119,7 @@ export interface ReminderSettings {
   dailyReminderTime: string;
   notifyOverdue: boolean;
   overdueThresholdDays: number;
+  weeklyReportExportEnabled: boolean;
 }
 
 export type EmailProvider = 'official' | 'emailjs' | 'resend' | 'custom';
@@ -126,6 +127,7 @@ export type EmailProvider = 'official' | 'emailjs' | 'resend' | 'custom';
 export interface EmailWebhookSettings {
   enabled: boolean;
   toEmail?: string;
+  betaAccessCode?: string;
   lastError?: string;
   lastSentAt?: string;
 }
@@ -144,6 +146,7 @@ export interface ReminderProblemDelivery {
 export interface ReminderDeliveryState {
   lastDailyNotificationDate?: string;
   lastWeeklySummarySentDate?: string;
+  lastWeeklyReportExportedDate?: string;
   emailByProblemId: Record<string, ReminderProblemDelivery>;
 }
 
@@ -292,6 +295,7 @@ export type RuntimeRequest =
       };
     }
   | { type: 'SEND_TEST_EMAIL' }
+  | { type: 'EXPORT_WEEKLY_REPORT' }
   | { type: 'SEND_TEST_NOTIFICATION' }
   | { type: 'CHECK_REMINDERS' }
   | {
