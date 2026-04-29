@@ -9,6 +9,7 @@ import type {
 } from '../shared/types';
 
 const OFFICIAL_MAILER_SECRET = import.meta.env.VITE_CRUSH_MAILER_SECRET || '';
+const DEFAULT_OFFICIAL_MAILER_BASE_URL = 'https://mail.crushlc.site';
 const MISSING_SECRET_MESSAGE = 'Official mailer is not configured in this build. Set VITE_CRUSH_MAILER_SECRET to enable email delivery.';
 const WEEKLY_EMAIL_CARD_LIMIT = 3;
 
@@ -116,6 +117,16 @@ function officialMailerHeaders(): Record<string, string> {
   };
 }
 
+function officialMailerSendUrl(): string {
+  const explicitUrl = import.meta.env.VITE_CRUSH_MAILER_SEND_URL?.trim();
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
+  const baseUrl = (import.meta.env.VITE_CRUSH_MAILER_BASE_URL?.trim() || DEFAULT_OFFICIAL_MAILER_BASE_URL).replace(/\/+$/, '');
+  return `${baseUrl}/api/send-reminder`;
+}
+
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<void> {
   console.log(`[EmailWebhook] Posting to ${url}...`);
   try {
@@ -171,7 +182,7 @@ export async function sendWeeklySummaryEmail(
   const payload = createWeeklySummaryPayload(summary, dueProblems, settings, locale);
 
   await postJson(
-    'https://crush-leetcode-official-mailer.vercel.app/api/send-reminder',
+    officialMailerSendUrl(),
     officialMailerHeaders(),
     {
       recipientEmail: settings.toEmail,
