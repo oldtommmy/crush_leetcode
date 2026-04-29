@@ -3,7 +3,7 @@
 
   <h1>Crush LeetCode</h1>
 
-  <p><strong>把刷过的题，真正变成会做的题。</strong></p>
+  <p><strong>把刷过的 LeetCode 题，真正变成会做的题。</strong></p>
   <p><strong>Turn solved LeetCode problems into long-term memory.</strong></p>
 
   <p>
@@ -15,56 +15,108 @@
   </p>
 
   <p>
-    <a href="#why">Why</a> ·
-    <a href="#features">Features</a> ·
-    <a href="#screenshots">Screenshots</a> ·
-    <a href="#install">Install</a> ·
-    <a href="#roadmap">Roadmap</a> ·
+    <a href="#中文说明">中文说明</a> ·
+    <a href="#english">English</a> ·
     <a href="#development">Development</a>
   </p>
 </div>
 
 ---
 
-<a id="why"></a>
+## 中文说明
 
-## Why / 为什么需要它
+### ✨ 项目介绍
 
-> **刷题最怕的不是没做过，而是做过又忘。**  
-> Crush LeetCode 把 AC、评分、复习、笔记和提醒串成一个闭环，让每道题都有下一次出现的理由。
+**Crush LeetCode** 是一款 Chrome 扩展，帮助你把 LeetCode 刷题变成一个更稳定的复习流程。
 
-Many tools record what you have solved. Crush LeetCode focuses on what you can still recall later.
+它会在你提交通过后记录题目，根据你的掌握程度安排下一次复习，并提供题目笔记、今日复习列表、桌面提醒和周报能力。你不用再额外维护表格，也不用靠感觉猜今天该复习什么。
 
-<table>
-  <tr>
-    <td><strong>科学复习</strong><br />FSRS schedules reviews from your feedback, not from a fixed 1/2/4/7-day table.</td>
-    <td><strong>贴近流程</strong><br />Works inside LeetCode pages, the extension popup, and browser reminders.</td>
-    <td><strong>长期沉淀</strong><br />Keeps problem state, review logs, Markdown notes, backups, and digest data together.</td>
-  </tr>
-  <tr>
-    <td><strong>Smarter Review</strong><br />Prioritizes problems by retrievability and overdue days.</td>
-    <td><strong>Less Noise</strong><br />Avoids repeated same-day prompts and unnecessary weekly emails.</td>
-    <td><strong>Portable Data</strong><br />Exports and imports full JSON backups with preview before merge.</td>
-  </tr>
-</table>
+### 🚀 核心功能
 
-<a id="features"></a>
+| 功能 | 说明 |
+| --- | --- |
+| ✅ AC 自动记录 | 支持 `leetcode.com` 和 `leetcode.cn`，通过后自动弹出评分面板。 |
+| 🧠 智能复习计划 | 基于 `FSRS` 间隔重复算法，按你的掌握情况安排下次复习。 |
+| 📌 今日复习 | Popup 中展示今天该复习的题、已完成题和逾期题。 |
+| 📝 Markdown 笔记 | 每道题都可以写独立笔记，支持代码高亮预览。 |
+| 🔔 提醒和周报 | 支持桌面提醒，也可以配置邮箱接收复习周报。 |
+| 💾 数据备份 | 支持导出 / 导入 JSON，并在导入前预览数据变化。 |
+| 🌗 双语与主题 | 支持中文 / English，以及浅色、深色、跟随系统主题。 |
 
-## Features / 已实现功能
+### 🌟 我们的优势
 
-| Area | What It Does | 中文说明 |
-| --- | --- | --- |
-| **Accepted Detection** | Detects accepted submissions on `leetcode.com` and `leetcode.cn`. | AC 后自动弹出评分面板，也支持手动打开。 |
-| **FSRS Scheduling** | Uses `ts-fsrs@5.3.x` to update stability, difficulty, reps, lapses, and next review time. | 根据“完全没思路 / 困难 / 一般 / 轻松”动态安排下次复习。 |
-| **Daily Plan** | Shows due problems, completed problems, overdue count, total library, and 7-day review stats. | Popup 里直接完成今日复习、打开原题或归档题目。 |
-| **Markdown Notes** | Provides per-problem notes with preview and code highlighting. | 每道题独立笔记，适合记录思路、错因和模板。 |
-| **Reminders & Digest** | Sends desktop reminders and optional weekly email summaries. | 到点提醒待复习题，周报展示复习趋势和逾期情况。 |
-| **Backup & Import** | Exports/imports JSON with a preview of new, overwritten, and invalid records. | 数据在 `chrome.storage.local`，可完整备份迁移。 |
-| **Bilingual UI** | Supports English and Simplified Chinese, plus light/dark/system theme. | 中英文界面和主题模式已内置。 |
+- **贴近刷题场景**：直接运行在 LeetCode 页面和浏览器扩展中，不需要切换到额外工具。
+- **复习更有节奏**：不是简单按固定天数提醒，而是根据你每次的真实反馈调整复习时间。
+- **笔记和复习连在一起**：题目、评分、复习日志和 Markdown 笔记都围绕同一道题沉淀。
+- **数据可带走**：支持 JSON 备份和恢复，不把你的刷题记录锁死在一个地方。
 
-<a id="screenshots"></a>
+### 📸 截图
 
-## Screenshots / 截图
+<div align="center">
+
+| 评分弹窗 | 掌握度看板 |
+|:---:|:---:|
+| ![评分弹窗](./public/shots/rating-modal.png) | ![掌握度看板](./public/shots/dashboard.png) |
+
+| Markdown 笔记 | 设置页面 |
+|:---:|:---:|
+| ![Markdown 笔记](./public/shots/notes.png) | ![设置页面](./public/shots/settings.png) |
+
+</div>
+
+### 🛠 安装使用
+
+1. 打开 [Releases](https://github.com/oldtommmy/crush_leetcode/releases)，下载最新的 zip 包并解压。
+2. 在 Chrome 地址栏打开 `chrome://extensions/`。
+3. 开启右上角 **Developer mode / 开发者模式**。
+4. 点击 **Load unpacked / 加载已解压的扩展程序**，选择解压后的目录。
+
+### 🧭 使用流程
+
+1. 在 LeetCode 正常做题并提交。
+2. Accepted 后选择你的掌握程度：`完全没思路`、`困难`、`一般`、`轻松`。
+3. 打开扩展 Popup 查看今日复习计划。
+4. 在题目页或 Popup 中记录 Markdown 笔记。
+5. 在设置页开启提醒、配置周报邮箱或导入导出数据。
+
+### 🗺 后续优化方向
+
+- **更强的数据存储**：升级到 `IndexedDB`，让大量题目和笔记也能保持流畅。
+- **更直观的复习分析**：展示薄弱标签、逾期趋势和容易忘的题。
+- **云端备份 / 同步**：支持跨设备恢复数据，减少换电脑或重装浏览器的成本。
+- **AI 复盘辅助**：在用户主动选择的前提下，总结笔记中的错因和常见模式。
+- **自动化发布**：用 `GitHub Actions` 自动测试、构建和打包发布版本。
+
+---
+
+## English
+
+### ✨ Introduction
+
+**Crush LeetCode** is a Chrome extension that helps you turn LeetCode practice into a repeatable review system.
+
+After you solve a problem, it records the result, asks how well you understood it, schedules the next review, and keeps your notes, reminders, and weekly digest in one place.
+
+### 🚀 Features
+
+| Feature | Description |
+| --- | --- |
+| ✅ Accepted Detection | Supports `leetcode.com` and `leetcode.cn`, with a rating panel after accepted submissions. |
+| 🧠 Smart Review Plan | Uses the `FSRS` spaced repetition algorithm to schedule reviews from your feedback. |
+| 📌 Daily Plan | Shows due problems, completed problems, and overdue problems in the popup. |
+| 📝 Markdown Notes | Keep per-problem notes with Markdown preview and code highlighting. |
+| 🔔 Reminders & Digest | Supports desktop reminders and optional weekly email summaries. |
+| 💾 Backup & Import | Export and import JSON backups with a preview before applying changes. |
+| 🌗 Bilingual & Theme | Supports English, Simplified Chinese, light mode, dark mode, and system theme. |
+
+### 🌟 What Makes It Useful
+
+- **Built for the LeetCode workflow**: Works directly on problem pages and in the browser popup.
+- **Review timing that adapts**: Schedules reviews based on your feedback instead of fixed intervals.
+- **Notes stay connected to problems**: Ratings, review logs, and Markdown notes all belong to the same problem record.
+- **Portable data**: JSON backup and import keep your progress recoverable.
+
+### 📸 Screenshots
 
 <div align="center">
 
@@ -78,63 +130,30 @@ Many tools record what you have solved. Crush LeetCode focuses on what you can s
 
 </div>
 
-<a id="install"></a>
-
-## Install / 安装使用
-
-### Install from Release
+### 🛠 Installation
 
 1. Download the latest zip from [Releases](https://github.com/oldtommmy/crush_leetcode/releases) and unzip it.
 2. Open `chrome://extensions/` in Chrome.
 3. Enable **Developer mode**.
 4. Click **Load unpacked** and select the extracted folder.
 
-### 使用流程
+### 🧭 How To Use
 
-1. 在 LeetCode 正常做题并提交。
-2. Accepted 后按真实掌握程度评分。
-3. 打开扩展 Popup 查看今日复习计划。
-4. 在题目页或 Popup 中写 Markdown 笔记。
-5. 在设置页开启桌面提醒、配置周报邮箱、导出或导入备份。
+1. Solve and submit problems on LeetCode as usual.
+2. After an Accepted result, rate your understanding: `No clue`, `Hard`, `Normal`, or `Too easy`.
+3. Open the extension popup to review today's plan.
+4. Write Markdown notes from the problem page or popup.
+5. Configure reminders, weekly digest email, and data backup from the settings page.
 
-<a id="roadmap"></a>
+### 🗺 Roadmap
 
-## Roadmap / 下一步优化方向
+- **Better storage**: Move large local data to `IndexedDB` for better performance.
+- **Review analytics**: Show weak tags, overdue trends, and problems you often forget.
+- **Cloud backup / sync**: Make it easier to recover data across devices.
+- **AI-assisted review**: Summarize selected notes and common mistakes when users opt in.
+- **Release automation**: Use `GitHub Actions` to test, build, package, and release more reliably.
 
-<table>
-  <tr>
-    <th>Direction</th>
-    <th>Concrete Next Steps</th>
-    <th>Expected Gain</th>
-  </tr>
-  <tr>
-    <td><strong>IndexedDB Storage</strong><br />存储升级</td>
-    <td>Split `problems`, `reviewLogs`, `notes`, and `settings`; add indexes for `nextReviewAt`, `updatedAt`, and `problemId`; keep JSON migration.</td>
-    <td>Faster popup and safer growth when users reach hundreds or thousands of problems.</td>
-  </tr>
-  <tr>
-    <td><strong>Review Analytics</strong><br />复习分析</td>
-    <td>Build charts from existing ReviewLog data: weak tags, difficulty distribution, overdue trend, and repeated-lapse problems.</td>
-    <td>Show not only what to review, but why those problems are risky.</td>
-  </tr>
-  <tr>
-    <td><strong>Cloud Backup</strong><br />云端恢复</td>
-    <td>Start with Chrome Sync for settings, then add WebDAV/Gist/Drive-style full backup with conflict preview.</td>
-    <td>Recover data across devices without locking users into one backend.</td>
-  </tr>
-  <tr>
-    <td><strong>AI Review Assistant</strong><br />AI 复盘</td>
-    <td>Let users opt in to analyze selected notes and review logs; summarize mistakes and generate editable pattern notes.</td>
-    <td>Turn scattered notes into structured review material without replacing user thinking.</td>
-  </tr>
-  <tr>
-    <td><strong>Release Automation</strong><br />发布自动化</td>
-    <td>Add GitHub Actions for typecheck, test, build, zip packaging, and release note draft.</td>
-    <td>Ship Chrome extension releases with fewer manual mistakes.</td>
-  </tr>
-</table>
-
-<a id="development"></a>
+---
 
 ## Development
 
