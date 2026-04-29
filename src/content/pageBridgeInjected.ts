@@ -1,3 +1,5 @@
+import { inspectSubmissionResponse, shouldInspectUrl } from './submissionDetection';
+
 declare global {
   interface Window {
     __quizRecallBridgeInstalled?: boolean;
@@ -8,49 +10,15 @@ declare global {
   }
 }
 
-export {};
-
 const ACCEPTED_MESSAGE_TYPE = 'QUIZ_RECALL_ACCEPTED_SUBMISSION';
-const acceptedPattern = /accepted|通过/i;
-const submitOrCheckPattern = /\/submit\/?|\/submissions\/detail\/|\/check\/?|submission|graphql/i;
-
-function containsAccepted(value: unknown, depth = 0): boolean {
-  if (!value || depth > 5) {
-    return false;
-  }
-
-  if (typeof value === 'string') {
-    return acceptedPattern.test(value);
-  }
-
-  if (typeof value === 'number') {
-    return value === 10;
-  }
-
-  if (Array.isArray(value)) {
-    return value.some((item) => containsAccepted(item, depth + 1));
-  }
-
-  if (typeof value === 'object') {
-    return Object.entries(value as Record<string, unknown>).some(([key, nestedValue]) => {
-      const interestingKey = /status|state|result|submission|message|code/i.test(key);
-      return interestingKey && containsAccepted(nestedValue, depth + 1);
-    });
-  }
-
-  return false;
-}
+const submittedIds = new Set<string>();
 
 function notifyAccepted() {
   window.postMessage({ type: ACCEPTED_MESSAGE_TYPE }, window.location.origin);
 }
 
 function inspect(url: unknown, payload: unknown) {
-  if (!submitOrCheckPattern.test(String(url || ''))) {
-    return;
-  }
-
-  if (containsAccepted(payload)) {
+  if (inspectSubmissionResponse(url, payload, submittedIds)) {
     notifyAccepted();
   }
 }
@@ -65,7 +33,7 @@ function installBridge() {
   window.fetch = async function patchedFetch(input, init) {
     const response = await originalFetch.apply(this, [input, init]);
     const url = typeof input === 'string' || input instanceof URL ? String(input) : input?.url;
-    if (submitOrCheckPattern.test(String(url || ''))) {
+    if (shouldInspectUrl(url)) {
       response
         .clone()
         .json()
@@ -92,7 +60,7 @@ function installBridge() {
   XMLHttpRequest.prototype.send = function patchedSend(body?: Document | XMLHttpRequestBodyInit | null) {
     this.addEventListener('load', function handleLoad() {
       const url = this.__quizRecallUrl;
-      if (!submitOrCheckPattern.test(String(url || ''))) {
+      if (!shouldInspectUrl(url)) {
         return;
       }
       try {
