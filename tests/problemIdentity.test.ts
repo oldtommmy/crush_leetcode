@@ -32,6 +32,14 @@ describe('problemIdentity', () => {
     expect(extractTagsFromScripts([script])).toEqual(['Array', 'Two Pointers']);
   });
 
+  it('ignores stale script question data when the title slug does not match', () => {
+    const script = '{"data":{"question":{"titleSlug":"two-sum","questionFrontendId":"1","difficulty":"EASY","topicTags":[{"name":"Array","translatedName":"数组"}]}}}';
+
+    expect(extractQuestionFrontendIdFromScripts([script], 'longest-consecutive-sequence')).toBeUndefined();
+    expect(extractDifficultyFromScripts([script], 'longest-consecutive-sequence')).toBe('Unknown');
+    expect(extractTagsFromScripts([script], 'longest-consecutive-sequence')).toEqual([]);
+  });
+
   it('falls back to English title from slug for legacy Chinese stored titles in English locale', () => {
     const title = displayProblemTitle(
       {

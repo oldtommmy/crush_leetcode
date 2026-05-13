@@ -37,6 +37,38 @@ function includesChinese(value: string | undefined): boolean {
   return Boolean(value && /[\u3400-\u9fff]/.test(value));
 }
 
+function normalizeTitleText(value: string | undefined): string | undefined {
+  const normalized = value?.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return undefined;
+  }
+  return stripSiteSuffix(normalized);
+}
+
+function titleTextLooksLikeSlug(value: string | undefined, titleSlug: string): boolean {
+  const normalized = normalizeTitleText(value);
+  if (!normalized) {
+    return false;
+  }
+
+  const slugWords = titleSlug.split('-').filter((word) => word.length > 2);
+  const lower = normalized.toLowerCase();
+  return slugWords.length > 0 && slugWords.every((word) => lower.includes(word));
+}
+
+function extractLeadingQuestionId(value: string | undefined): string | undefined {
+  const match = normalizeTitleText(value)?.match(/^(\d+[A-Z]?)\.\s+/);
+  return match?.[1];
+}
+
+function extractTitleFromMeta(): string | undefined {
+  const title =
+    metaContent('meta[property="og:title"]') ||
+    metaContent('meta[name="title"]') ||
+    document.title;
+  return normalizeTitleText(title);
+}
+
 function decodeJsonStringLiteral(value: string): string | undefined {
   try {
     return JSON.parse(value) as string;
@@ -65,8 +97,11 @@ export function extractTranslatedTitleFromScripts(scriptContents: Iterable<strin
   return undefined;
 }
 
-export function extractQuestionFrontendIdFromScripts(scriptContents: Iterable<string>): string | undefined {
+export function extractQuestionFrontendIdFromScripts(scriptContents: Iterable<string>, titleSlug?: string): string | undefined {
   for (const content of scriptContents) {
+    if (titleSlug && !content.includes(`"titleSlug":"${titleSlug}"`) && !content.includes(`"title_slug":"${titleSlug}"`)) {
+      continue;
+    }
     const match = /"questionFrontendId"\s*:\s*"([^"]+)"/.exec(content);
     if (match?.[1]) {
       return match[1];
@@ -92,8 +127,15 @@ function mapDifficulty(value: string | undefined): ProblemDifficulty {
   return 'Unknown';
 }
 
-export function extractDifficultyFromScripts(scriptContents: Iterable<string>): ProblemDifficulty {
+function scriptMatchesTitleSlug(content: string, titleSlug: string | undefined): boolean {
+  return !titleSlug || content.includes(`"titleSlug":"${titleSlug}"`) || content.includes(`"title_slug":"${titleSlug}"`);
+}
+
+export function extractDifficultyFromScripts(scriptContents: Iterable<string>, titleSlug?: string): ProblemDifficulty {
   for (const content of scriptContents) {
+    if (!scriptMatchesTitleSlug(content, titleSlug)) {
+      continue;
+    }
     const match = /"difficulty"\s*:\s*"(EASY|MEDIUM|HARD|Easy|Medium|Hard|简单|中等|困难)"/.exec(content);
     const difficulty = mapDifficulty(match?.[1]);
     if (difficulty !== 'Unknown') {
@@ -103,10 +145,13 @@ export function extractDifficultyFromScripts(scriptContents: Iterable<string>): 
   return 'Unknown';
 }
 
-export function extractTagsFromScripts(scriptContents: Iterable<string>): string[] {
+export function extractTagsFromScripts(scriptContents: Iterable<string>, titleSlug?: string): string[] {
   const tags: string[] = [];
 
   for (const content of scriptContents) {
+    if (!scriptMatchesTitleSlug(content, titleSlug)) {
+      continue;
+    }
     const topicTagsMatch = /"topicTags"\s*:\s*\[(.*?)\]/s.exec(content);
     if (!topicTagsMatch?.[1]) {
       continue;
@@ -153,14 +198,10 @@ function detectTags(): string[] {
 }
 
 function detectChineseTitle(heading: string, platform: Platform): string | undefined {
-  if (includesChinese(heading)) {
-    return stripQuestionNumber(heading);
-  }
-
   const selectorTitle =
-    text('[data-cy="question-title"]') ||
-    text('div[data-track-load="description_content"] [class*="text-title"]') ||
-    stripSiteSuffix(metaContent('meta[property="og:title"]') || '');
+    normalizeTitleText(text('[data-cy="question-title"]')) ||
+    normalizeTitleText(text('div[data-track-load="description_content"] [class*="text-title"]')) ||
+    extractTitleFromMeta();
 
   if (includesChinese(selectorTitle)) {
     return stripQuestionNumber(selectorTitle as string);
@@ -171,6 +212,10 @@ function detectChineseTitle(heading: string, platform: Platform): string | undef
   );
   if (translatedTitle) {
     return translatedTitle;
+  }
+
+  if (includesChinese(heading) && normalizeTitleText(heading)!.length <= 80) {
+    return stripQuestionNumber(heading);
   }
 
   if (platform === 'leetcode-cn') {
@@ -188,17 +233,27 @@ export function getProblemIdentity(locationRef = window.location): ProblemIdenti
   }
 
   const scripts = Array.from(document.scripts, (script) => script.textContent ?? '');
+  const selectorHeading =
+    normalizeTitleText(text('[data-cy="question-title"]')) ||
+    normalizeTitleText(text('div[data-track-load="description_content"] [class*="text-title"]')) ||
+    normalizeTitleText(text('a[href^="/problems/"][class*="text-title"]'));
+  const metaTitle = extractTitleFromMeta();
+  const h1 = normalizeTitleText(text('h1'));
   const heading =
-    text('[data-cy="question-title"]') ||
-    text('a[href^="/problems/"][class*="text-title"]') ||
-    text('h1') ||
+    selectorHeading ||
+    (titleTextLooksLikeSlug(metaTitle, titleSlug) ? metaTitle : undefined) ||
+    (titleTextLooksLikeSlug(h1, titleSlug) ? h1 : undefined) ||
     titleFromSlug(titleSlug);
   const titleZh = detectChineseTitle(heading, platform);
-  const frontendQuestionId = extractQuestionFrontendIdFromScripts(scripts);
+  const frontendQuestionId =
+    extractLeadingQuestionId(selectorHeading) ||
+    extractLeadingQuestionId(metaTitle) ||
+    extractLeadingQuestionId(h1) ||
+    extractQuestionFrontendIdFromScripts(scripts, titleSlug);
   const normalizedTitle = stripQuestionNumber(heading);
   const displayTitle = platform === 'leetcode-cn' ? titleFromSlug(titleSlug, frontendQuestionId) : normalizedTitle;
-  const difficultyFromScripts = extractDifficultyFromScripts(scripts);
-  const scriptTags = extractTagsFromScripts(scripts);
+  const difficultyFromScripts = extractDifficultyFromScripts(scripts, titleSlug);
+  const scriptTags = extractTagsFromScripts(scripts, titleSlug);
   const detectedTags = detectTags();
   const tags = canonicalizeTags(scriptTags.length > 0 ? scriptTags : detectedTags);
 

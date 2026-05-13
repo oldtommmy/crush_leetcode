@@ -46,6 +46,34 @@ describe('review selectors', () => {
     expect(result[1].daysOverdue).toBe(0);
   });
 
+  it('treats problems scheduled later today as due for the daily plan', () => {
+    const laterToday = createProblem({
+      id: 'leetcode:two-sum',
+      titleSlug: 'two-sum',
+      title: 'Two Sum',
+      url: 'https://leetcode.com/problems/two-sum/',
+      nextReviewAt: '2026-04-21T23:30:00.000Z'
+    });
+    const tomorrow = createProblem({
+      id: 'leetcode:add-two-numbers',
+      titleSlug: 'add-two-numbers',
+      title: 'Add Two Numbers',
+      url: 'https://leetcode.com/problems/add-two-numbers/',
+      nextReviewAt: '2026-04-22T00:01:00.000Z'
+    });
+
+    const state = createState({
+      problemsById: {
+        [laterToday.id]: laterToday,
+        [tomorrow.id]: tomorrow
+      }
+    });
+
+    expect(selectDueProblems(state, new Date('2026-04-21T08:00:00.000Z')).map((problem) => problem.id)).toEqual([
+      laterToday.id
+    ]);
+  });
+
   it('selects only problems completed on the same local day', () => {
     const completed = createProblem({
       id: 'leetcode:two-sum',

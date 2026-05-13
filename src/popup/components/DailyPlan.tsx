@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { DueProblem, Locale, Problem, ReviewStats } from '../../shared/types';
+import type { DailyCompletionMessage, DueProblem, Locale, Problem, ReviewStats, RuntimeResponse } from '../../shared/types';
 import { t } from '../../shared/i18n/messages';
 import { ProblemCard } from './ProblemCard';
 import { calculateRetrievability, getMasteryTier } from '../../shared/review/selectors';
 import { todayDateString } from '../../shared/date';
 import { MAX_DAILY_REVIEW_LIMIT, MIN_DAILY_REVIEW_LIMIT } from '../../shared/constants';
+import { localizeDailyCompletionText } from '../../shared/dailyCompletionMessages';
 
 interface DailyPlanProps {
   dueProblems: DueProblem[];
@@ -18,7 +19,7 @@ interface DailyPlanProps {
   onChanged: () => void;
 }
 
-const encouragements: Record<Locale, Array<{ title: string; body: string }>> = {
+const defaultEncouragements: Record<Locale, Array<{ title: string; body: string }>> = {
   en: [
     {
       title: 'No Bugs Today',
@@ -110,6 +111,7 @@ export function DailyPlan({
 }: DailyPlanProps) {
   const [view, setView] = useState<'daily' | 'all'>('daily');
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [remoteEncouragements, setRemoteEncouragements] = useState<DailyCompletionMessage[]>();
 
   const remainingCount = dueProblems.length;
   const deferredCount = Math.max(0, totalDailyRemainingCount - remainingCount);
@@ -118,10 +120,33 @@ export function DailyPlan({
   const goalCompletedCount = Math.min(completedCount, totalToday);
   const progress = totalToday > 0 ? (goalCompletedCount / totalToday) * 100 : 0;
   const encouragement = useMemo(() => {
-    const pool = encouragements[locale];
+    const remotePool = remoteEncouragements
+      ?.map((message) => ({
+        title: localizeDailyCompletionText(message.title, locale),
+        body: localizeDailyCompletionText(message.body, locale)
+      }))
+      .filter((message) => message.title && message.body);
+    const pool = remotePool?.length ? remotePool : defaultEncouragements[locale];
     const index = Math.floor(Math.random() * pool.length);
     return pool[index];
-  }, [locale, totalToday]);
+  }, [locale, remoteEncouragements, totalToday]);
+
+  useEffect(() => {
+    let cancelled = false;
+    chrome.runtime
+      .sendMessage({ type: 'GET_DAILY_COMPLETION_MESSAGES' })
+      .then((response: RuntimeResponse<{ messages?: DailyCompletionMessage[] } | undefined>) => {
+        if (cancelled || !response?.ok || !response.data?.messages?.length) return;
+        setRemoteEncouragements(response.data.messages);
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteEncouragements(undefined);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (totalToday === 0 || remainingCount !== 0 || goalCompletedCount === 0) {

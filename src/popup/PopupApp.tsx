@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { DueProblem, ExtensionStorageState, Problem, ReviewStats, RuntimeRequest, RuntimeResponse } from '../shared/types';
+import type {
+  AnnouncementAction,
+  DueProblem,
+  ExtensionAnnouncement,
+  ExtensionStorageState,
+  Problem,
+  ReviewStats,
+  RuntimeRequest,
+  RuntimeResponse
+} from '../shared/types';
 import { t } from '../shared/i18n/messages';
 import { DailyPlan } from './components/DailyPlan';
 import { NoteEditor } from './components/NoteEditor';
+import { AnnouncementBanner } from '../shared/ui/AnnouncementBanner';
 
 interface DailyPlanResponse {
   state: ExtensionStorageState;
@@ -18,6 +28,7 @@ export function PopupApp() {
   const [data, setData] = useState<DailyPlanResponse | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [showDonate, setShowDonate] = useState(false);
+  const [announcement, setAnnouncement] = useState<ExtensionAnnouncement | undefined>();
 
   const load = useCallback(() => {
     chrome.runtime
@@ -33,6 +44,35 @@ export function PopupApp() {
   }, []);
 
   useEffect(() => load(), [load]);
+
+  useEffect(() => {
+    chrome.runtime
+      .sendMessage({ type: 'CHECK_ANNOUNCEMENT' } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse<ExtensionAnnouncement | undefined>) => {
+        if (response.ok) {
+          setAnnouncement(response.data);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const openAnnouncementAction = useCallback((action: AnnouncementAction) => {
+    chrome.runtime
+      .sendMessage({ type: 'OPEN_ANNOUNCEMENT_ACTION', payload: { action } } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse) => {
+        if (!response.ok) {
+          throw new Error(response.error);
+        }
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  }, []);
+
+  const dismissAnnouncement = useCallback((noticeId: string) => {
+    setAnnouncement(undefined);
+    chrome.runtime
+      .sendMessage({ type: 'DISMISS_ANNOUNCEMENT', payload: { noticeId } } satisfies RuntimeRequest)
+      .catch(() => undefined);
+  }, []);
 
   const updateDailyReviewLimit = useCallback((limit: number) => {
     chrome.runtime
@@ -80,6 +120,18 @@ export function PopupApp() {
         {error ? (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
             {error}
+          </div>
+        ) : null}
+
+        {announcement ? (
+          <div className="mb-4">
+            <AnnouncementBanner
+              announcement={announcement}
+              locale={locale}
+              compact
+              onAction={openAnnouncementAction}
+              onDismiss={dismissAnnouncement}
+            />
           </div>
         ) : null}
 

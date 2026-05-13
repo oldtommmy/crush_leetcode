@@ -4,6 +4,8 @@ import { notifyDailyPlan, notifyTest, notifyWeeklyReportExported } from './notif
 import { exportWeeklyReportHtml } from './weeklyReportExport';
 import { todayDateString } from '../shared/date';
 import { applyReview } from '../shared/review/scheduler';
+import { normalizeAnnouncement, shouldShowAnnouncement } from '../shared/announcements';
+import { normalizeDailyCompletionMessages } from '../shared/dailyCompletionMessages';
 import {
   selectDailyRemainingProblems,
   selectDueProblems,
@@ -28,8 +30,13 @@ import {
   setState,
   updateState
 } from '../shared/storage/chromeStorage';
-import type { DueProblem, ReviewLog, RuntimeRequest, RuntimeResponse } from '../shared/types';
-import { MAX_DAILY_REVIEW_LIMIT, MIN_DAILY_REVIEW_LIMIT } from '../shared/constants';
+import type { AnnouncementAction, DueProblem, ReviewLog, RuntimeRequest, RuntimeResponse } from '../shared/types';
+import {
+  ANNOUNCEMENTS_URL,
+  DAILY_COMPLETION_MESSAGES_URL,
+  MAX_DAILY_REVIEW_LIMIT,
+  MIN_DAILY_REVIEW_LIMIT
+} from '../shared/constants';
 
 let reviewWriteQueue: Promise<unknown> = Promise.resolve();
 
@@ -202,6 +209,81 @@ async function sendTestEmail(): Promise<void> {
   }
 }
 
+function currentExtensionVersion(): string {
+  return chrome.runtime.getManifest().version;
+}
+
+async function checkAnnouncement() {
+  const state = await getState();
+  const response = await fetch(ANNOUNCEMENTS_URL, {
+    cache: 'no-store',
+    headers: {
+      accept: 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Announcement request failed: ${response.status}`);
+  }
+
+  const announcement = normalizeAnnouncement(await response.json());
+  if (!announcement) return undefined;
+
+  return shouldShowAnnouncement(
+    announcement,
+    currentExtensionVersion(),
+    state.metadata.dismissedAnnouncementIds
+  )
+    ? announcement
+    : undefined;
+}
+
+async function getDailyCompletionMessages() {
+  const response = await fetch(DAILY_COMPLETION_MESSAGES_URL, {
+    cache: 'no-store',
+    headers: {
+      accept: 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Daily completion messages request failed: ${response.status}`);
+  }
+
+  return normalizeDailyCompletionMessages(await response.json());
+}
+
+async function dismissAnnouncement(noticeId: string) {
+  const trimmedNoticeId = noticeId.trim();
+  if (!trimmedNoticeId) return;
+
+  await updateState((state) => ({
+    ...state,
+    metadata: {
+      ...state.metadata,
+      dismissedAnnouncementIds: [
+        ...new Set([...(state.metadata.dismissedAnnouncementIds ?? []), trimmedNoticeId])
+      ]
+    }
+  }));
+}
+
+async function openAnnouncementAction(action: AnnouncementAction) {
+  const url = new URL(action.url);
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error('Unsupported announcement URL.');
+  }
+
+  if (action.download) {
+    await chrome.downloads.download({
+      url: url.toString()
+    });
+    return;
+  }
+
+  await chrome.tabs.create({ url: url.toString() });
+}
+
 async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> {
   if (request.type === 'UPSERT_ACCEPTED_REVIEW') {
     const nextState = await enqueueReviewWrite(() => updateState((state) => {
@@ -237,6 +319,34 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
     }));
 
     return { ok: true, data: nextState };
+  }
+
+  if (request.type === 'CHECK_ANNOUNCEMENT') {
+    try {
+      return { ok: true, data: await checkAnnouncement() };
+    } catch (error) {
+      console.warn('Failed to check announcement.', error);
+      return { ok: true, data: undefined };
+    }
+  }
+
+  if (request.type === 'GET_DAILY_COMPLETION_MESSAGES') {
+    try {
+      return { ok: true, data: await getDailyCompletionMessages() };
+    } catch (error) {
+      console.warn('Failed to fetch daily completion messages.', error);
+      return { ok: true, data: undefined };
+    }
+  }
+
+  if (request.type === 'DISMISS_ANNOUNCEMENT') {
+    await dismissAnnouncement(request.payload.noticeId);
+    return { ok: true };
+  }
+
+  if (request.type === 'OPEN_ANNOUNCEMENT_ACTION') {
+    await openAnnouncementAction(request.payload.action);
+    return { ok: true };
   }
 
   if (request.type === 'GET_DAILY_PLAN') {

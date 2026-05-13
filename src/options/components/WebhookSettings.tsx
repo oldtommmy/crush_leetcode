@@ -21,6 +21,8 @@ export function WebhookSettings({
   const [inputEmail, setInputEmail] = useState(email.toEmail ?? '');
   const [inputBetaCode, setInputBetaCode] = useState(email.betaAccessCode ?? '');
 
+  const normalizeBetaCode = (code: string) => code.replace(/\s+/g, '');
+
   useEffect(() => {
     setInputEmail(email.toEmail ?? '');
   }, [email.toEmail]);
@@ -33,7 +35,8 @@ export function WebhookSettings({
   const isValidEmail = !inputEmail || emailRegex.test(inputEmail);
   const hasChanged = inputEmail !== (email.toEmail ?? '');
   const hasBetaCode = Boolean(email.betaAccessCode?.trim());
-  const betaCodeChanged = inputBetaCode.trim() !== (email.betaAccessCode ?? '');
+  const normalizedInputBetaCode = normalizeBetaCode(inputBetaCode);
+  const betaCodeChanged = normalizedInputBetaCode !== (email.betaAccessCode ?? '');
 
   const updateEmail = (patch: Partial<typeof email>) => {
     onChange({
@@ -52,8 +55,8 @@ export function WebhookSettings({
 
   const handleSaveBetaCode = () => {
     updateEmail({
-      betaAccessCode: inputBetaCode.trim() || undefined,
-      enabled: inputBetaCode.trim() ? email.enabled : false
+      betaAccessCode: normalizedInputBetaCode || undefined,
+      enabled: normalizedInputBetaCode ? email.enabled : false
     });
   };
 
@@ -117,7 +120,7 @@ export function WebhookSettings({
                 type="button"
                 className="rounded-xl bg-orange-500 px-4 py-2 text-xs font-black text-white transition-all hover:bg-orange-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleSaveBetaCode}
-                disabled={!inputBetaCode.trim()}
+                disabled={!normalizedInputBetaCode}
               >
                 {t(locale, 'saveBetaAccessCode')}
               </button>

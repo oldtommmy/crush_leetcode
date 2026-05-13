@@ -74,11 +74,12 @@ function sortDueProblems(problems: DueProblem[]): DueProblem[] {
 
 export function selectDueProblems(state: ExtensionStorageState, nowInput: Date | string = new Date()): DueProblem[] {
   const now = typeof nowInput === 'string' ? new Date(nowInput) : nowInput;
+  const today = todayDateString(now);
   
   return sortDueProblems(Object.values(state.problemsById)
     .filter((problem) => {
       if (problem.archived) return false;
-      return new Date(problem.nextReviewAt).getTime() <= now.getTime();
+      return daysBetween(problem.nextReviewAt, today) >= 0;
     })
     .map((problem) => toDueProblem(problem, now)));
 }

@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Crush LeetCode",
   "short_name": "CrushLC",
-  "version": "0.0.2",
-  "version_name": "0.0.2 beta",
+  "version": "0.0.3",
+  "version_name": "0.0.3 beta",
 
   "description": "Review solved LeetCode problems with spaced repetition, notes, and reminders.",
   "icons": {
@@ -13,14 +13,16 @@
   "host_permissions": [
     "https://leetcode.com/*",
     "https://leetcode.cn/*",
-    "https://*.crushlc.site/*"
+    "https://*.crushlc.site/*",
+    "https://*.supabase.co/*",
+    "http://127.0.0.1:8787/*"
   ],
   "background": {
     "service_worker": "assets/background.js",
     "type": "module"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.crushlc.site"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.crushlc.site https://*.supabase.co http://127.0.0.1:8787"
   },
   "action": {
     "default_title": "Crush LeetCode",

@@ -8,6 +8,7 @@ export type ReviewSource = 'accepted_modal' | 'daily_plan' | 'manual_note' | 'im
 
 export type Locale = 'en' | 'zh-CN';
 export type DebugScenarioPreset = 'empty' | 'mixed' | 'overdue' | 'import_preview';
+export type LocalizedText = string | Partial<Record<Locale, string>>;
 
 /**
  * FSRS State Enum (matching ts-fsrs)
@@ -132,6 +133,13 @@ export interface EmailWebhookSettings {
   lastSentAt?: string;
 }
 
+export interface SupabaseSyncSettings {
+  enabled: boolean;
+  syncKey?: string;
+  lastSyncedAt?: string;
+  lastError?: string;
+}
+
 export interface ReminderProblemDelivery {
   problemId: string;
   lastSentAt?: string;
@@ -148,6 +156,36 @@ export interface ReminderDeliveryState {
   lastWeeklySummarySentDate?: string;
   lastWeeklyReportExportedDate?: string;
   emailByProblemId: Record<string, ReminderProblemDelivery>;
+}
+
+export interface AnnouncementAction {
+  label: LocalizedText;
+  url: string;
+  download?: boolean;
+}
+
+export type AnnouncementSeverity = 'info' | 'success' | 'warning' | 'critical';
+
+export interface ExtensionAnnouncement {
+  schemaVersion: 1;
+  noticeId: string;
+  latestVersion: string;
+  minVersion?: string;
+  severity: AnnouncementSeverity;
+  title: LocalizedText;
+  body?: LocalizedText;
+  actions: AnnouncementAction[];
+}
+
+export interface DailyCompletionMessage {
+  title: LocalizedText;
+  body: LocalizedText;
+}
+
+export interface DailyCompletionMessagesConfig {
+  schemaVersion: 1;
+  enabled: boolean;
+  messages: DailyCompletionMessage[];
 }
 
 export interface WeeklyReviewPoint {
@@ -203,6 +241,7 @@ export interface UserSettings {
   reviewPolicy: ReviewPolicy;
   reminders: ReminderSettings;
   emailWebhook: EmailWebhookSettings;
+  cloudSync: SupabaseSyncSettings;
   themeMode: 'system' | 'light' | 'dark';
   dailyReviewLimit: number;
 }
@@ -221,6 +260,7 @@ export interface ExtensionStorageState {
     storageBackend: 'local';
     migratedAt?: string;
     reminderDelivery?: ReminderDeliveryState;
+    dismissedAnnouncementIds?: string[];
   };
 }
 
@@ -275,6 +315,20 @@ export type RuntimeRequest =
       };
     }
   | { type: 'GET_DAILY_PLAN' }
+  | { type: 'CHECK_ANNOUNCEMENT' }
+  | { type: 'GET_DAILY_COMPLETION_MESSAGES' }
+  | {
+      type: 'DISMISS_ANNOUNCEMENT';
+      payload: {
+        noticeId: string;
+      };
+    }
+  | {
+      type: 'OPEN_ANNOUNCEMENT_ACTION';
+      payload: {
+        action: AnnouncementAction;
+      };
+    }
   | {
       type: 'UPDATE_DAILY_REVIEW_LIMIT';
       payload: {

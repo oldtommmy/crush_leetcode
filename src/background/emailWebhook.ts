@@ -127,6 +127,10 @@ function officialMailerSendUrl(): string {
   return `${baseUrl}/api/send-reminder`;
 }
 
+function normalizeBetaAccessCode(code?: string): string {
+  return code?.replace(/\s+/g, '') ?? '';
+}
+
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<void> {
   console.log(`[EmailWebhook] Posting to ${url}...`);
   try {
@@ -174,7 +178,7 @@ export async function sendWeeklySummaryEmail(
     return;
   }
 
-  const betaAccessCode = settings.betaAccessCode?.trim();
+  const betaAccessCode = normalizeBetaAccessCode(settings.betaAccessCode);
   if (!betaAccessCode) {
     throw new Error('Official digest beta access code is required.');
   }

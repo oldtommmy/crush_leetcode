@@ -8,6 +8,7 @@ import {
 import { problemIdFor } from '../review/scheduler';
 import { FSRSScheduler } from '../review/fsrsScheduler';
 import { normalizeReminderDelivery } from '../reminders/delivery';
+import { uploadSupabaseSnapshot } from '../sync/supabaseSync';
 import {
   DebugScenarioPreset,
   ExtensionStorageState,
@@ -28,6 +29,7 @@ const DEFAULT_LOCAL_STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
 const STORAGE_QUOTA_HEADROOM_RATIO = 0.9;
 
 let stateWriteQueue: Promise<unknown> = Promise.resolve();
+let autoCloudSyncQueue: Promise<unknown> = Promise.resolve();
 
 function byteLength(value: string): number {
   return new TextEncoder().encode(value).length;
@@ -65,6 +67,20 @@ function enqueueStateWrite<T>(task: () => Promise<T>): Promise<T> {
   const next = stateWriteQueue.then(task, task);
   stateWriteQueue = next.catch(() => undefined);
   return next;
+}
+
+function scheduleAutoCloudSync(state: ExtensionStorageState): void {
+  const config = state.settings.cloudSync;
+  if (!config.enabled || !config.syncKey) {
+    return;
+  }
+
+  autoCloudSyncQueue = autoCloudSyncQueue
+    .catch(() => undefined)
+    .then(() => uploadSupabaseSnapshot(state, config))
+    .catch((error) => {
+      console.warn('Crush LeetCode cloud sync upload failed.', error);
+    });
 }
 
 function isValidDateInput(value: unknown): value is string {
@@ -519,7 +535,12 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
       emailWebhook: {
         ...DEFAULT_STATE.settings.emailWebhook,
         ...input?.settings?.emailWebhook,
-        betaAccessCode: input?.settings?.emailWebhook?.betaAccessCode?.trim() || undefined
+        betaAccessCode: input?.settings?.emailWebhook?.betaAccessCode?.replace(/\s+/g, '') || undefined
+      },
+      cloudSync: {
+        ...DEFAULT_STATE.settings.cloudSync,
+        ...input?.settings?.cloudSync,
+        syncKey: input?.settings?.cloudSync?.syncKey?.trim() || undefined
       },
       dailyReviewLimit: normalizeDailyReviewLimit(input?.settings?.dailyReviewLimit)
     },
@@ -530,7 +551,10 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
       debugActivePreset: input?.metadata?.debugActivePreset,
       debugCoveredPresets: normalizeDebugPresets(input?.metadata?.debugCoveredPresets),
       storageBackend: 'local',
-      reminderDelivery: normalizeReminderDelivery(input?.metadata?.reminderDelivery)
+      reminderDelivery: normalizeReminderDelivery(input?.metadata?.reminderDelivery),
+      dismissedAnnouncementIds: Array.isArray(input?.metadata?.dismissedAnnouncementIds)
+        ? input.metadata.dismissedAnnouncementIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+        : []
     }
   };
 }
@@ -553,6 +577,7 @@ async function writeStateNow(state: ExtensionStorageState): Promise<void> {
       }
     }
   });
+  scheduleAutoCloudSync(state);
 }
 
 export async function setState(state: ExtensionStorageState): Promise<void> {

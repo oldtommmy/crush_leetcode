@@ -10,6 +10,8 @@ import {
   updateState
 } from '../shared/storage/chromeStorage';
 import type {
+  AnnouncementAction,
+  ExtensionAnnouncement,
   DebugScenarioPreset,
   ExtensionStorageState,
   RuntimeRequest,
@@ -21,6 +23,7 @@ import { WebhookSettings } from './components/WebhookSettings';
 import { ImportExportPanel } from './components/ImportExportPanel';
 import { InstallationCheck } from './components/InstallationCheck';
 import { t } from '../shared/i18n/messages';
+import { AnnouncementBanner } from '../shared/ui/AnnouncementBanner';
 
 const DEBUG_TAP_TARGET = 7;
 const DEBUG_TAP_WINDOW_MS = 2000;
@@ -39,9 +42,21 @@ export function OptionsApp() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | undefined>();
   const [showDonate, setShowDonate] = useState(false);
   const [logoTapCount, setLogoTapCount] = useState(0);
+  const [announcement, setAnnouncement] = useState<ExtensionAnnouncement | undefined>();
 
   useEffect(() => {
     getState().then(setLoadedState).catch((error) => setMessage({ text: String(error), type: 'error' }));
+  }, []);
+
+  useEffect(() => {
+    chrome.runtime
+      .sendMessage({ type: 'CHECK_ANNOUNCEMENT' } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse<ExtensionAnnouncement | undefined>) => {
+        if (response.ok) {
+          setAnnouncement(response.data);
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -125,6 +140,26 @@ export function OptionsApp() {
         }
       })
       .catch((err) => setMessage({ text: err instanceof Error ? err.message : String(err), type: 'error' }));
+  };
+
+  const openAnnouncementAction = (action: AnnouncementAction) => {
+    chrome.runtime
+      .sendMessage({ type: 'OPEN_ANNOUNCEMENT_ACTION', payload: { action } } satisfies RuntimeRequest)
+      .then((res: RuntimeResponse) => {
+        if (!res.ok) throw new Error(res.error);
+      })
+      .catch((err) => setMessage({ text: err instanceof Error ? err.message : String(err), type: 'error' }));
+  };
+
+  const dismissAnnouncement = (noticeId: string) => {
+    setAnnouncement(undefined);
+    chrome.runtime
+      .sendMessage({ type: 'DISMISS_ANNOUNCEMENT', payload: { noticeId } } satisfies RuntimeRequest)
+      .catch(() => undefined);
+  };
+
+  const openProblemLibrary = () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('library.html') });
   };
 
   const toggleDebugMode = async () => {
@@ -226,8 +261,33 @@ export function OptionsApp() {
             />
           </div>
           <aside className="space-y-6">
+            {announcement ? (
+              <AnnouncementBanner
+                announcement={announcement}
+                locale={locale}
+                onAction={openAnnouncementAction}
+                onDismiss={dismissAnnouncement}
+              />
+            ) : null}
             <InstallationCheck settings={state.settings} totalProblems={totalProblems} locale={locale} />
-            <ImportExportPanel state={state} locale={locale} onImport={(input) => void runImport(input)} />
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 px-4 py-3 text-sm font-black text-white transition-all hover:bg-black active:scale-95 dark:bg-white dark:text-neutral-900"
+              onClick={openProblemLibrary}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3h18v18H3z" />
+                <path d="M3 9h18" />
+                <path d="M9 21V9" />
+              </svg>
+              {locale === 'zh-CN' ? '打开完整题库' : 'Open library'}
+            </button>
+            <ImportExportPanel
+              state={state}
+              locale={locale}
+              onImport={(input) => void runImport(input)}
+              onChanged={setLoadedState}
+            />
 
              <div className="rounded-2xl bg-amber-500/10 p-6 text-amber-600 dark:bg-amber-500/5 dark:text-amber-500 border border-amber-500/10">
               <h3 className="text-sm font-bold flex items-center gap-2">
@@ -317,6 +377,7 @@ export function OptionsApp() {
             </div>
           </aside>
         </div>
+
       </div>
 
       {/* Donation Modal */}

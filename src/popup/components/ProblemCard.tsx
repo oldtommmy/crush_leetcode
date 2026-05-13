@@ -119,7 +119,18 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
   const isDanger = strengthPercent < 90;
 
   const daysUntilReview = problem.nextReviewAt ? daysBetween(todayDateString(), problem.nextReviewAt) : null;
-  const nextReviewText = daysUntilReview === null ? '' : daysUntilReview === 0 ? t(locale, 'today') : daysUntilReview === 1 ? t(locale, 'tomorrow') : `${daysUntilReview} ${t(locale, 'daysLater')}`;
+  const nextReviewText = (() => {
+    if (daysUntilReview === null) return '';
+    if (daysUntilReview < 0) {
+      const overdueDays = Math.abs(daysUntilReview);
+      return locale === 'zh-CN'
+        ? `${overdueDays}${t(locale, 'daysDelay')}`
+        : `${overdueDays} ${t(locale, 'daysDelay')}`;
+    }
+    if (daysUntilReview === 0) return t(locale, 'today');
+    if (daysUntilReview === 1) return t(locale, 'tomorrow');
+    return `${daysUntilReview} ${t(locale, 'daysLater')}`;
+  })();
 
   return (
     <article className={`group relative overflow-hidden rounded-2xl border transition-all ${
