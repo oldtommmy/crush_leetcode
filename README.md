@@ -8,7 +8,7 @@
 
   <p>
     <a href="https://github.com/oldtommmy/crush_leetcode"><img src="https://img.shields.io/badge/GitHub-crush__leetcode-181717?style=for-the-badge&logo=github" alt="GitHub Repo" /></a>
-    <a href="https://github.com/oldtommmy/crush_leetcode/releases"><img src="https://img.shields.io/badge/version-0.0.4%20beta-ffb020?style=for-the-badge" alt="Version 0.0.4 beta" /></a>
+    <a href="https://github.com/oldtommmy/crush_leetcode/releases"><img src="https://img.shields.io/badge/version-0.0.4%20beta.1-ffb020?style=for-the-badge" alt="Version 0.0.4 beta.1" /></a>
     <img src="https://img.shields.io/badge/Chrome-MV3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome MV3" />
     <img src="https://img.shields.io/badge/FSRS-ts--fsrs%205.3-blueviolet?style=for-the-badge" alt="ts-fsrs 5.3" />
     <img src="https://img.shields.io/badge/License-CC%20BY--NC%204.0-red?style=for-the-badge" alt="License CC BY-NC 4.0" />
@@ -33,6 +33,7 @@
 
 ### v0.0.4 beta 更新重点
 
+- 🧯 **v0.0.4 beta.1 热修**：修复发布包 `content.js` 中 CodeTop 构建常量未替换导致题目页脚本崩溃的问题，恢复 AC 后弹窗和入库。
 - ✅ **LeetCode CN AC 判定修复**：改用主世界网络监听，区分运行示例和真实提交，支持 `/v2/check/`，避免跳到下一题后弹旧题卡片。
 - 🔥 **CodeTop 高频题 MVP**：新增独立 CodeTop 元信息服务，仍通过现有公开域名的同域路径提供给插件；Popup 增加“复习 / 高频”分段入口，完整题库页顶层支持“完整题库 / 大厂高频”切换。
 - 🛡️ **本地匹配与隐私边界**：高频题只和浏览器本地题库匹配，不上传题库、笔记、代码或复习日志；服务端只同步 CodeTop 题目元信息，不保存完整题面。
@@ -120,6 +121,7 @@ After you submit an accepted solution, it records the problem, schedules the nex
 
 ### v0.0.4 beta Highlights
 
+- 🧯 **v0.0.4 beta.1 hotfix**: Fixes a release-package issue where the CodeTop build-time constant was not replaced in `content.js`, which could crash the problem-page script and prevent Accepted popups and library insertion.
 - ✅ **LeetCode CN accepted detection fix**: Uses main-world network observation, separates run-code checks from real submissions, supports `/v2/check/`, and avoids stale cards after navigation.
 - 🔥 **CodeTop hot question MVP**: Adds an independent CodeTop metadata service exposed to the extension through the existing public same-origin path; the popup now has Review / Hot segmented tabs, and the library page can switch between Full Library / Company Hot List.
 - 🛡️ **Local matching and privacy boundary**: Hot questions are matched only with the browser-local library. Local problems, notes, code, and review logs are never uploaded; the backend stores CodeTop metadata only, not full problem content.
