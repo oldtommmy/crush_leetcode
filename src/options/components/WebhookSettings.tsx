@@ -99,13 +99,13 @@ export function WebhookSettings({
       </div>
 
       {!showOfficialControls && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-orange-900 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-100">
-            <p className="font-bold">{t(locale, 'officialDigestBetaDesc')}</p>
-            <p className="mt-2 text-xs opacity-90">{t(locale, 'officialDigestBetaApply')}</p>
-            <p className="mt-2 text-xs opacity-80">{t(locale, 'officialDigestBetaUnlockHint')}</p>
-          </div>
-          <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="space-y-3">
+          <p className="rounded-xl bg-orange-50 px-3 py-2 text-xs font-bold text-orange-800 dark:bg-orange-500/10 dark:text-orange-200">
+            {locale === 'zh-CN'
+              ? '官方周报服务需要访问码，可邮件联系开通。'
+              : 'Official digest requires an access code. Email us to enable it.'}
+          </p>
+          <div>
             <label className="mb-2 block text-xs font-black text-neutral-800 dark:text-neutral-100">
               {t(locale, 'officialDigestBetaCode')}
             </label>
@@ -147,9 +147,9 @@ export function WebhookSettings({
 
       {showOfficialControls && (
       <div className={`space-y-6 transition-opacity ${email.enabled ? 'opacity-100' : 'opacity-60'}`}>
-        <div className="rounded-xl bg-neutral-50 p-4 text-xs text-neutral-600 dark:bg-neutral-900/50 dark:text-neutral-300">
-          {t(locale, 'weeklyDigestDesc')}
-        </div>
+        <p className="rounded-xl bg-neutral-50 px-3 py-2 text-xs font-medium text-neutral-600 dark:bg-neutral-900/50 dark:text-neutral-300">
+          {locale === 'zh-CN' ? '开启后可接收官方周报邮件。' : 'Enable to receive official weekly digest emails.'}
+        </p>
 
         <div>
           <label className="mb-2 block text-sm font-bold text-neutral-900 dark:text-neutral-100">{t(locale, 'officialDigestBetaCode')}</label>

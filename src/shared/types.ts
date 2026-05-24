@@ -235,6 +235,90 @@ export interface WeeklySummaryStats {
   reviewedProblemCards?: WeeklyProblemSummary[];
 }
 
+export interface HotQuestionCompany {
+  id: number;
+  name: string;
+  isNew: boolean;
+  syncedAt?: string;
+}
+
+export type HotQuestionDifficulty = 1 | 2 | 3;
+
+export interface HotQuestion {
+  source: 'codetop';
+  companyId: number;
+  companyName: string;
+  leetcodeFrontendId: string;
+  leetcodeQuestionId?: number;
+  title: string;
+  slugTitle: string;
+  difficulty: HotQuestionDifficulty;
+  frequency: number;
+  rank?: number;
+  sourceUpdatedAt?: string;
+  syncedAt?: string;
+}
+
+export type HotQuestionReason =
+  | 'company_hot'
+  | 'not_solved'
+  | 'review_due'
+  | 'previously_hard'
+  | 'recently_updated';
+
+export interface HotQuestionRecommendation extends HotQuestion {
+  score: number;
+  reasons: HotQuestionReason[];
+  matchedProblemId?: string;
+  solved: boolean;
+}
+
+export interface HotQuestionCacheState {
+  schemaVersion: 1;
+  selectedCompanyId?: number;
+  companies: HotQuestionCompany[];
+  questionsByCompanyId: Record<string, HotQuestion[]>;
+  fetchedAtByCompanyId: Record<string, string>;
+  syncedAt?: string;
+  stale?: boolean;
+  lastError?: string;
+}
+
+export interface HotQuestionsRuntimeData {
+  companies: HotQuestionCompany[];
+  selectedCompanyId?: number;
+  questions: HotQuestion[];
+  recommendations: HotQuestionRecommendation[];
+  stale?: boolean;
+  syncedAt?: string;
+  fetchedAt?: string;
+  lastError?: string;
+}
+
+export interface ReviewCoachInput {
+  periodStart: string;
+  periodEnd: string;
+  weeklySummary: WeeklySummaryStats;
+  dueQuestions: WeeklyProblemSummary[];
+  candidateQuestions: HotQuestionRecommendation[];
+}
+
+export interface ReviewCoachOutput {
+  summary: string;
+  weakPoints: string[];
+  recommendedQuestions: Array<{
+    leetcodeFrontendId: string;
+    priority: 'high' | 'medium' | 'low';
+    reason: string;
+  }>;
+  nextPlan: Array<{
+    day: number;
+    task: string;
+    questionIds: string[];
+  }>;
+  encouragement: string;
+}
+
 export interface UserSettings {
   autoShowAcceptedModal: boolean;
   locale: Locale;
@@ -315,6 +399,19 @@ export type RuntimeRequest =
       };
     }
   | { type: 'GET_DAILY_PLAN' }
+  | {
+      type: 'GET_HOT_QUESTIONS';
+      payload?: {
+        force?: boolean;
+      };
+    }
+  | {
+      type: 'UPDATE_HOT_QUESTION_COMPANY';
+      payload: {
+        companyId: number;
+      };
+    }
+  | { type: 'REFRESH_HOT_QUESTIONS' }
   | { type: 'CHECK_ANNOUNCEMENT' }
   | { type: 'GET_DAILY_COMPLETION_MESSAGES' }
   | {

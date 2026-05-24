@@ -2,6 +2,7 @@ import { isDailyAlarm, scheduleDailyAlarm } from './alarms';
 import { sendWeeklySummaryEmail } from './emailWebhook';
 import { notifyDailyPlan, notifyTest, notifyWeeklyReportExported } from './notifications';
 import { exportWeeklyReportHtml } from './weeklyReportExport';
+import { getHotQuestionsRuntimeData, updateHotQuestionCompany } from './hotQuestions';
 import { todayDateString } from '../shared/date';
 import { applyReview } from '../shared/review/scheduler';
 import { normalizeAnnouncement, shouldShowAnnouncement } from '../shared/announcements';
@@ -377,6 +378,21 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
         lastLogsByProblemId
       }
     };
+  }
+
+  if (request.type === 'GET_HOT_QUESTIONS') {
+    const state = await getState();
+    return { ok: true, data: await getHotQuestionsRuntimeData(state, { force: request.payload?.force }) };
+  }
+
+  if (request.type === 'REFRESH_HOT_QUESTIONS') {
+    const state = await getState();
+    return { ok: true, data: await getHotQuestionsRuntimeData(state, { force: true }) };
+  }
+
+  if (request.type === 'UPDATE_HOT_QUESTION_COMPANY') {
+    const state = await getState();
+    return { ok: true, data: await updateHotQuestionCompany(state, request.payload.companyId) };
   }
 
   if (request.type === 'UPDATE_DAILY_REVIEW_LIMIT') {

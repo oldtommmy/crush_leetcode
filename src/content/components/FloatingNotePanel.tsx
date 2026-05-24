@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeHighlight from 'rehype-highlight';
 import { sanitizeMarkdown } from '../../shared/markdown/sanitize';
 import { problemIdFor } from '../../shared/review/scheduler';
 import type { ExtensionStorageState, Locale, ProblemIdentity, RuntimeRequest, RuntimeResponse } from '../../shared/types';
 import { t } from '../../shared/i18n/messages';
 import { displayProblemTitle } from '../../shared/leetcode/display';
-import 'highlight.js/styles/github-dark.css';
 
 interface FloatingNotePanelProps {
   identity: ProblemIdentity;
@@ -229,18 +226,9 @@ export function FloatingNotePanel({ identity, locale, onRate }: FloatingNotePane
 
               <div className="h-[calc(100%-60px)] overflow-hidden rounded-2xl border border-neutral-200 bg-white transition-all focus-within:border-amber-500/50 dark:border-neutral-800 dark:bg-[#1a1a1a]">
                 {preview ? (
-                  <div className="h-full overflow-y-auto p-8 prose prose-neutral dark:prose-invert max-w-none text-neutral-900 dark:text-neutral-100">
-                    <ReactMarkdown
-                      rehypePlugins={[rehypeHighlight]}
-                      components={{
-                        code: ({ node, ...props }) => (
-                          <code className="rounded bg-neutral-200 px-1.5 py-0.5 font-mono text-sm dark:bg-neutral-800" {...props} />
-                        ),
-                      }}
-                    >
-                      {sanitizeMarkdown(markdown)}
-                    </ReactMarkdown>
-                  </div>
+                  <pre className="h-full overflow-y-auto whitespace-pre-wrap break-words p-8 font-mono text-sm leading-relaxed text-neutral-900 dark:text-neutral-100">
+                    {sanitizeMarkdown(markdown)}
+                  </pre>
                 ) : (
                   <textarea
                     className="h-full w-full resize-none border-none bg-transparent p-8 font-mono text-sm leading-relaxed transition-all focus:outline-none dark:text-neutral-200"

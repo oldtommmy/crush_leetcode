@@ -11,6 +11,7 @@ import type {
 } from '../shared/types';
 import { t } from '../shared/i18n/messages';
 import { DailyPlan } from './components/DailyPlan';
+import { HotQuestionsPanel } from './components/HotQuestionsPanel';
 import { NoteEditor } from './components/NoteEditor';
 import { AnnouncementBanner } from '../shared/ui/AnnouncementBanner';
 
@@ -29,6 +30,7 @@ export function PopupApp() {
   const [error, setError] = useState<string | undefined>();
   const [showDonate, setShowDonate] = useState(false);
   const [announcement, setAnnouncement] = useState<ExtensionAnnouncement | undefined>();
+  const [activeTab, setActiveTab] = useState<'review' | 'hot'>('review');
 
   const load = useCallback(() => {
     chrome.runtime
@@ -116,7 +118,7 @@ export function PopupApp() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 pb-20">
+      <div className="flex-1 p-4">
         {error ? (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
             {error}
@@ -136,6 +138,23 @@ export function PopupApp() {
         ) : null}
 
         {data ? (
+          <div className="mb-4 grid grid-cols-2 rounded-2xl bg-neutral-200/70 p-1 dark:bg-neutral-800/70">
+            <button
+              className={`rounded-xl py-2 text-xs font-black transition ${activeTab === 'review' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
+              onClick={() => setActiveTab('review')}
+            >
+              {locale === 'zh-CN' ? '复习' : 'Review'}
+            </button>
+            <button
+              className={`rounded-xl py-2 text-xs font-black transition ${activeTab === 'hot' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
+              onClick={() => setActiveTab('hot')}
+            >
+              {locale === 'zh-CN' ? '大厂高频' : 'Company Hot'}
+            </button>
+          </div>
+        ) : null}
+
+        {data && activeTab === 'review' ? (
           <DailyPlan
             dueProblems={data.dailyRemainingProblems}
             totalDailyRemainingCount={data.totalDailyRemainingCount}
@@ -149,7 +168,7 @@ export function PopupApp() {
           />
         ) : null}
 
-        {data ? (
+        {data && activeTab === 'review' ? (
           <NoteEditor
             problems={problems}
             notes={data.state.notesByProblemId}
@@ -157,10 +176,14 @@ export function PopupApp() {
             onSaved={load}
           />
         ) : null}
+
+        {data && activeTab === 'hot' ? (
+          <HotQuestionsPanel locale={locale} />
+        ) : null}
       </div>
 
       {/* Footer Buttons */}
-      <footer className="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white/50 p-3 backdrop-blur-sm dark:border-neutral-800 dark:bg-[#1a1a1a]/50">
+      <footer className="mt-auto border-t border-neutral-200 bg-white/50 p-3 backdrop-blur-sm dark:border-neutral-800 dark:bg-[#1a1a1a]/50">
         <div className="flex items-center gap-2">
           <a
             href="https://github.com/oldtommmy/crush_leetcode"

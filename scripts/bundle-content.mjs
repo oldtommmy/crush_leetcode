@@ -37,6 +37,8 @@ await build({
   target: ['chrome114'],
   jsx: 'automatic',
   minify: true,
+  sourcemap: true,
+  sourcesContent: true,
   define,
   legalComments: 'none'
 });
@@ -49,6 +51,8 @@ await build({
   platform: 'browser',
   target: ['chrome114'],
   minify: true,
+  sourcemap: true,
+  sourcesContent: true,
   define,
   legalComments: 'none'
 });

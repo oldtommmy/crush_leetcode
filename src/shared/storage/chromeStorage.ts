@@ -520,6 +520,7 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
   return {
     ...cloneDefaultState(),
     ...input,
+    version: DEFAULT_STATE.version,
     problemsById: normalizedProblemsById,
     reviewLogsById: normalizedReviewLogsById,
     notesByProblemId: normalizedNotesByProblemId,

@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const announcementsUrl = env.VITE_CRUSH_ANNOUNCEMENTS_URL || '';
   const dailyCompletionMessagesUrl = env.VITE_CRUSH_DAILY_COMPLETION_MESSAGES_URL || '';
+  const codetopBaseUrl = env.VITE_CRUSH_CODETOP_BASE_URL || '';
   const supabaseUrl = env.VITE_CRUSH_SUPABASE_URL || '';
   const supabaseAnonKey = env.VITE_CRUSH_SUPABASE_ANON_KEY || '';
 
@@ -14,6 +15,7 @@ export default defineConfig(({ mode }) => {
   define: {
     __CRUSH_ANNOUNCEMENTS_URL__: JSON.stringify(announcementsUrl),
     __CRUSH_DAILY_COMPLETION_MESSAGES_URL__: JSON.stringify(dailyCompletionMessagesUrl),
+    __CRUSH_CODETOP_BASE_URL__: JSON.stringify(codetopBaseUrl),
     __CRUSH_SUPABASE_URL__: JSON.stringify(supabaseUrl),
     __CRUSH_SUPABASE_ANON_KEY__: JSON.stringify(supabaseAnonKey)
   },

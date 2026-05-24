@@ -213,7 +213,7 @@ export function OptionsApp() {
   return (
     <main className="min-h-screen bg-[#f7f8fa] pb-20 text-neutral-900 dark:bg-[#1a1a1a] dark:text-neutral-100 font-sans">
       <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/80 px-6 py-4 backdrop-blur-md dark:border-neutral-800 dark:bg-[#262626]/80">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -244,9 +244,9 @@ export function OptionsApp() {
         </div>
       </header>
 
-      <div className="mx-auto mt-8 max-w-4xl px-6">
-        <div className="grid gap-8 md:grid-cols-[1fr_280px]">
-          <div className="space-y-8">
+      <div className="mx-auto mt-8 max-w-6xl px-6">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,760px)_320px] lg:justify-center">
+          <div className="space-y-5">
             <ReminderSettings
               settings={state.settings}
               onChange={saveSettings}
@@ -259,8 +259,15 @@ export function OptionsApp() {
               onTest={testEmail}
               showTest={Boolean(state.metadata.debugMode)}
             />
+            <ImportExportPanel
+              state={state}
+              locale={locale}
+              onImport={(input) => runImport(input)}
+              onChanged={setLoadedState}
+            />
           </div>
-          <aside className="space-y-6">
+
+          <aside className="space-y-5 lg:sticky lg:top-24">
             {announcement ? (
               <AnnouncementBanner
                 announcement={announcement}
@@ -269,7 +276,9 @@ export function OptionsApp() {
                 onDismiss={dismissAnnouncement}
               />
             ) : null}
+            <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-[#262626]">
             <InstallationCheck settings={state.settings} totalProblems={totalProblems} locale={locale} />
+            <div className="my-5 h-px bg-neutral-100 dark:bg-neutral-800" />
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 px-4 py-3 text-sm font-black text-white transition-all hover:bg-black active:scale-95 dark:bg-white dark:text-neutral-900"
@@ -282,15 +291,10 @@ export function OptionsApp() {
               </svg>
               {locale === 'zh-CN' ? '打开完整题库' : 'Open library'}
             </button>
-            <ImportExportPanel
-              state={state}
-              locale={locale}
-              onImport={(input) => void runImport(input)}
-              onChanged={setLoadedState}
-            />
 
-             <div className="rounded-2xl bg-amber-500/10 p-6 text-amber-600 dark:bg-amber-500/5 dark:text-amber-500 border border-amber-500/10">
-              <h3 className="text-sm font-bold flex items-center gap-2">
+            <div className="my-5 h-px bg-neutral-100 dark:bg-neutral-800" />
+            <div className="text-amber-600 dark:text-amber-500">
+              <h3 className="flex items-center gap-2 text-sm font-bold">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 {t(locale, 'proTip')}
               </h3>
@@ -298,6 +302,7 @@ export function OptionsApp() {
                 {t(locale, 'proTipDesc')}
               </p>
             </div>
+            <div className="my-5 h-px bg-neutral-100 dark:bg-neutral-800" />
 
             {state.metadata.debugMode && (
               <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-6 text-violet-700 dark:text-violet-300">
@@ -374,6 +379,7 @@ export function OptionsApp() {
                 </svg>
                 {t(locale, 'buyMeATea')}
               </button>
+            </div>
             </div>
           </aside>
         </div>

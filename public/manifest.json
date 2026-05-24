@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Crush LeetCode",
   "short_name": "CrushLC",
-  "version": "0.0.3",
-  "version_name": "0.0.3 beta",
+  "version": "0.0.4",
+  "version_name": "0.0.4 beta",
 
   "description": "Review solved LeetCode problems with spaced repetition, notes, and reminders.",
   "icons": {
@@ -15,14 +15,15 @@
     "https://leetcode.cn/*",
     "https://*.crushlc.site/*",
     "https://*.supabase.co/*",
-    "http://127.0.0.1:8787/*"
+    "http://127.0.0.1:8787/*",
+    "http://127.0.0.1:8788/*"
   ],
   "background": {
     "service_worker": "assets/background.js",
     "type": "module"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.crushlc.site https://*.supabase.co http://127.0.0.1:8787"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.crushlc.site https://*.supabase.co http://127.0.0.1:8787 http://127.0.0.1:8788"
   },
   "action": {
     "default_title": "Crush LeetCode",
@@ -30,6 +31,12 @@
   },
   "options_page": "options.html",
   "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
+      "js": ["assets/pageBridgeInjected.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
     {
       "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
       "js": ["assets/content.js"],

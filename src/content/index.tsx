@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Component, useEffect, useState, type ReactNode } from 'react';
 import { ensureInjectedRoot } from './injectRoot';
 import { observeAcceptedSubmission } from './acceptedObserver';
 import { installLeetCodeSubmissionBridge, listenForAcceptedBridge } from './pageBridge';
@@ -9,6 +9,34 @@ import { problemIdFor } from '../shared/review/scheduler';
 import { isSameLocalDate } from '../shared/date';
 import type { ExtensionStorageState, Locale, ProblemIdentity, RuntimeRequest, RuntimeResponse } from '../shared/types';
 import '../styles/tailwind.css';
+
+interface AcceptedContext {
+  pathname?: string;
+}
+
+class ContentErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  render() {
+    return this.state.hasError ? null : this.props.children;
+  }
+}
+
+function titleSlugFromPathname(pathname: string | undefined): string | undefined {
+  return pathname?.match(/\/problems\/([^/]+)/)?.[1];
+}
+
+function isCurrentProblemContext(context?: AcceptedContext): boolean {
+  const submittedSlug = titleSlugFromPathname(context?.pathname);
+  if (!submittedSlug) {
+    return true;
+  }
+  return submittedSlug === titleSlugFromPathname(window.location.pathname);
+}
 
 function ContentApp() {
   const [identity, setIdentity] = useState<ProblemIdentity | undefined>(() => detectCurrentProblem());
@@ -43,7 +71,12 @@ function ContentApp() {
   }, []);
 
   useEffect(() => {
-    const openAcceptedModal = async () => {
+    const openAcceptedModal = async (context?: AcceptedContext) => {
+      if (!isCurrentProblemContext(context)) {
+        console.log('Crush LeetCode: Accepted event belongs to a previous problem, skipping auto-popup.');
+        return;
+      }
+
       const current = detectCurrentProblem();
       if (!current) return;
       
@@ -100,4 +133,8 @@ function ContentApp() {
   );
 }
 
-ensureInjectedRoot().root.render(<ContentApp />);
+ensureInjectedRoot().root.render(
+  <ContentErrorBoundary>
+    <ContentApp />
+  </ContentErrorBoundary>
+);

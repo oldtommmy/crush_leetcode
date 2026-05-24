@@ -52,6 +52,20 @@ const ratingStyles: Record<ReviewRating, { border: string, bg: string, text: str
   }
 };
 
+function getReviewPreview(
+  existing: Problem | undefined,
+  rating: ReviewRating,
+  policy: typeof DEFAULT_REVIEW_POLICY,
+  now: Date,
+  lastLog?: ReviewLog
+): ReturnType<typeof calculateNextReview> {
+  try {
+    return calculateNextReview(existing, rating, policy, now, lastLog);
+  } catch {
+    return calculateNextReview(undefined, rating, policy, now);
+  }
+}
+
 async function sendRating(identity: ProblemIdentity, rating: ReviewRating, source: 'accepted_modal' | 'daily_plan') {
   const request: RuntimeRequest = {
     type: 'UPSERT_ACCEPTED_REVIEW',
@@ -73,6 +87,7 @@ export function EvaluationModal({ identity, locale, source, onClose, onSaved }: 
   const [existingProblem, setExistingProblem] = useState<Problem | undefined>();
   const [lastLog, setLastLog] = useState<ReviewLog | undefined>();
   const [policy, setPolicy] = useState(DEFAULT_REVIEW_POLICY);
+  const now = new Date();
 
   useEffect(() => {
     chrome.runtime
@@ -116,8 +131,7 @@ export function EvaluationModal({ identity, locale, source, onClose, onSaved }: 
           
           <div className="grid grid-cols-1 gap-3">
             {ratings.map((rating) => {
-              // Now previews based on rolled-back state if already reviewed today
-              const scheduled = calculateNextReview(existingProblem, rating, policy, new Date(), lastLog);
+              const scheduled = getReviewPreview(existingProblem, rating, policy, now, lastLog);
               const style = ratingStyles[rating];
               return (
                 <button

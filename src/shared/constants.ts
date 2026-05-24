@@ -2,11 +2,13 @@ import type { ExtensionStorageState, ReviewPolicy, UserSettings } from './types'
 
 declare const __CRUSH_ANNOUNCEMENTS_URL__: string | undefined;
 declare const __CRUSH_DAILY_COMPLETION_MESSAGES_URL__: string | undefined;
+declare const __CRUSH_CODETOP_BASE_URL__: string | undefined;
 declare const __CRUSH_SUPABASE_URL__: string | undefined;
 declare const __CRUSH_SUPABASE_ANON_KEY__: string | undefined;
 
 export const STORAGE_KEY = 'quizRecallState';
-export const STORAGE_VERSION = 1;
+export const STORAGE_VERSION = 2;
+export const HOT_QUESTIONS_CACHE_KEY = 'crushLC.hotQuestionsCache';
 export const DAILY_ALARM_NAME = 'quizRecall.dailyReminder';
 export const DEFAULT_DAILY_REVIEW_LIMIT = 10;
 export const MIN_DAILY_REVIEW_LIMIT = 1;
@@ -18,6 +20,8 @@ export const ANNOUNCEMENTS_URL =
 export const DAILY_COMPLETION_MESSAGES_URL =
   __CRUSH_DAILY_COMPLETION_MESSAGES_URL__?.trim() ||
   'https://mail.crushlc.site/extension/daily-completion-messages.json';
+export const CODETOP_BASE_URL =
+  (__CRUSH_CODETOP_BASE_URL__?.trim() || 'https://mail.crushlc.site/codetop').replace(/\/+$/, '');
 export const CRUSH_SUPABASE_URL = __CRUSH_SUPABASE_URL__?.trim() || '';
 export const CRUSH_SUPABASE_ANON_KEY = __CRUSH_SUPABASE_ANON_KEY__?.trim() || '';
 

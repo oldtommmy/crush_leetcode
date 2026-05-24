@@ -3,13 +3,15 @@ const SUBMIT_PATTERNS = [/Submit/i, /提交/, /提交代码/];
 const RECENT_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
 const OBSERVER_DEBOUNCE_MS = 150;
 
+export interface AcceptedDomContext {
+  pathname?: string;
+}
+
 function hasAcceptedText(): boolean {
   const visibleText = document.body.textContent ?? '';
-  const exactLineMatch = visibleText
+  return visibleText
     .split(/\n+/)
     .some((line) => ACCEPTED_PATTERNS.some((pattern) => pattern.test(line.trim())));
-
-  return exactLineMatch || /\bAccepted\b/i.test(visibleText) || visibleText.includes('通过');
 }
 
 function isSubmitElement(target: EventTarget | null): boolean {
@@ -24,14 +26,16 @@ function isSubmitElement(target: EventTarget | null): boolean {
   return SUBMIT_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-export function observeAcceptedSubmission(onAccepted: () => void): () => void {
+export function observeAcceptedSubmission(onAccepted: (context?: AcceptedDomContext) => void): () => void {
   let lastSubmitAt = 0;
   let lastAcceptedAt = 0;
+  let lastSubmitPathname: string | undefined;
   let notifyTimer: ReturnType<typeof setTimeout> | undefined;
 
   const handleClick = (event: MouseEvent) => {
     if (isSubmitElement(event.target)) {
       lastSubmitAt = Date.now();
+      lastSubmitPathname = window.location.pathname;
     }
   };
 
@@ -43,9 +47,12 @@ export function observeAcceptedSubmission(onAccepted: () => void): () => void {
     if (now - lastAcceptedAt < 10_000) {
       return;
     }
+    if (lastSubmitPathname && window.location.pathname !== lastSubmitPathname) {
+      return;
+    }
     if (hasAcceptedText()) {
       lastAcceptedAt = now;
-      onAccepted();
+      onAccepted({ pathname: lastSubmitPathname });
     }
   };
 

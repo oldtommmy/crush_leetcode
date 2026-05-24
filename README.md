@@ -8,7 +8,7 @@
 
   <p>
     <a href="https://github.com/oldtommmy/crush_leetcode"><img src="https://img.shields.io/badge/GitHub-crush__leetcode-181717?style=for-the-badge&logo=github" alt="GitHub Repo" /></a>
-    <a href="https://github.com/oldtommmy/crush_leetcode/releases"><img src="https://img.shields.io/badge/version-0.0.3%20beta-ffb020?style=for-the-badge" alt="Version 0.0.3 beta" /></a>
+    <a href="https://github.com/oldtommmy/crush_leetcode/releases"><img src="https://img.shields.io/badge/version-0.0.4%20beta-ffb020?style=for-the-badge" alt="Version 0.0.4 beta" /></a>
     <img src="https://img.shields.io/badge/Chrome-MV3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome MV3" />
     <img src="https://img.shields.io/badge/FSRS-ts--fsrs%205.3-blueviolet?style=for-the-badge" alt="ts-fsrs 5.3" />
     <img src="https://img.shields.io/badge/License-CC%20BY--NC%204.0-red?style=for-the-badge" alt="License CC BY-NC 4.0" />
@@ -31,15 +31,12 @@
 
 它会在你提交通过后记录题目，根据你的掌握程度安排下一次复习，并提供题目笔记、今日复习列表、完整题库、桌面提醒、周报和可选云同步能力。你不用再额外维护表格，也不用靠感觉猜今天该复习什么。
 
-### v0.0.3 beta 更新重点
+### v0.0.4 beta 更新重点
 
-- 📣 **插件公告推送**：Popup 和设置页可以展示官方公告，例如新版本提示、仓库更新链接或下载地址。
-- 📚 **完整题库页面**：新增独立题库页，支持更大的表格视图、难度/状态/标签筛选、题目详情和掌握度展示。
-- 📝 **笔记导出**：支持把本地 Markdown 笔记导出，方便长期归档或迁移到其他知识库。
-- 🎉 **每日完成弹窗文案远程配置**：完成每日任务后的文案不再只写死在插件里，可以由后台 JSON 导入和维护。
-- ☁️ **可选云同步**：设置页新增云同步入口，用户主动开启并设置恢复码后，数据会在关键写入事件后自动上传。
-- 🧭 **题目信息识别修复**：修复部分题解页导致标题描述错乱、切题后题号和题名不同步的问题。
-- 📅 **复习日期修复**：复习到期判断改为按自然日处理，避免出现“下次复习: -1 天后”这类显示。
+- ✅ **LeetCode CN AC 判定修复**：改用主世界网络监听，区分运行示例和真实提交，支持 `/v2/check/`，避免跳到下一题后弹旧题卡片。
+- 🔥 **CodeTop 高频题 MVP**：新增独立 CodeTop 元信息服务，仍通过现有公开域名的同域路径提供给插件；Popup 增加“复习 / 高频”分段入口，完整题库页顶层支持“完整题库 / 大厂高频”切换。
+- 🛡️ **本地匹配与隐私边界**：高频题只和浏览器本地题库匹配，不上传题库、笔记、代码或复习日志；服务端只同步 CodeTop 题目元信息，不保存完整题面。
+- 🧩 **AI 边界预留**：本版不提供用户可见 LLM 功能，仅预留 AI 总结 / 计划所需的数据类型边界，后续版本再接 Provider。
 
 ### 核心功能
 
@@ -48,7 +45,8 @@
 | AC 自动记录 | 支持 `leetcode.com` 和 `leetcode.cn`，通过后自动弹出评分面板。 |
 | 智能复习计划 | 基于 `FSRS` 间隔重复算法，按你的掌握情况安排下次复习。 |
 | 今日复习 | Popup 中展示今天该复习的题、已完成题和逾期题。 |
-| 完整题库 | 独立页面查看全部题目，支持筛选、掌握度、详情和笔记编辑。 |
+| 高频推荐 | Popup 中按公司查看 CodeTop 高频题，并结合本地复习记录生成推荐原因。 |
+| 完整题库 | 独立页面支持“完整题库 / 大厂高频”顶层切换，可查看本地题库筛选、掌握度、详情、笔记和高频覆盖。 |
 | Markdown 笔记 | 每道题都可以写独立笔记，支持预览、编辑和本地导出。 |
 | 官方公告 | 支持从远端服务读取公告、版本提示、仓库链接和下载链接。 |
 | 提醒和周报 | 支持桌面提醒，也可以配置邮箱接收复习周报。 |
@@ -89,7 +87,7 @@
 
 1. 在 LeetCode 正常做题并提交。
 2. Accepted 后选择你的掌握程度：`完全没思路`、`困难`、`一般`、`轻松`。
-3. 打开扩展 Popup 查看今日复习计划和官方公告。
+3. 打开扩展 Popup 查看今日复习计划、高频推荐和官方公告。
 4. 在题目页、Popup 或完整题库页记录 Markdown 笔记。
 5. 在设置页配置提醒、周报邮箱、导入导出、笔记导出和可选云同步。
 
@@ -107,7 +105,7 @@
 - **更强的数据存储**：升级到 `IndexedDB`，让大量题目和笔记也能保持流畅。
 - **更细的同步策略**：补充冲突合并、同步历史、数据加密和更友好的恢复流程。
 - **更直观的复习分析**：展示薄弱标签、逾期趋势和容易忘的题。
-- **AI 复盘辅助**：在用户主动选择的前提下，总结笔记中的错因和常见模式。
+- **AI 总结 / 计划边界**：当前仅保留数据类型边界，后续版本接入 Provider 后再开放用户可见体验。
 - **自动化发布**：用 `GitHub Actions` 自动测试、构建和打包发布版本。
 
 ---
@@ -120,15 +118,12 @@
 
 After you submit an accepted solution, it records the problem, schedules the next review based on your mastery level, and provides problem notes, today's review list, a full problem library, desktop reminders, weekly reports, and optional cloud sync. You no longer need to maintain a separate spreadsheet or guess what to review today by feel.
 
-### v0.0.3 beta Highlights
+### v0.0.4 beta Highlights
 
-- 📣 **Remote announcements**: The popup and settings page can show official update notices, repository links, or download URLs.
-- 📚 **Full problem library page**: A larger standalone library view with difficulty/status/tag filters, details, notes, and mastery display.
-- 📝 **Markdown notes export**: Export local notes for long-term archiving or migration.
-- 🎉 **Remote daily completion messages**: Daily completion copy can now be managed by the backend through JSON import.
-- ☁️ **Optional cloud sync**: A cloud-sync entry has been added to Settings. After users opt in and set a recovery code, data is automatically uploaded after key write events.
-- 🧭 **Problem identity fixes**: Fixed cases where solution pages caused messy title descriptions, or where the problem number and name became inconsistent after switching problems.
-- 📅 **Review date fixes**: Due reviews are now handled by calendar date to avoid displays such as “next review: -1 days later”.
+- ✅ **LeetCode CN accepted detection fix**: Uses main-world network observation, separates run-code checks from real submissions, supports `/v2/check/`, and avoids stale cards after navigation.
+- 🔥 **CodeTop hot question MVP**: Adds an independent CodeTop metadata service exposed to the extension through the existing public same-origin path; the popup now has Review / Hot segmented tabs, and the library page can switch between Full Library / Company Hot List.
+- 🛡️ **Local matching and privacy boundary**: Hot questions are matched only with the browser-local library. Local problems, notes, code, and review logs are never uploaded; the backend stores CodeTop metadata only, not full problem content.
+- 🧩 **AI boundary only**: This release does not ship user-visible LLM functionality. It only reserves data type boundaries for future AI summaries and plans, with provider integration deferred to a later version.
 
 ### Core Features
 
@@ -137,7 +132,8 @@ After you submit an accepted solution, it records the problem, schedules the nex
 | Accepted auto-recording | Supports `leetcode.com` and `leetcode.cn`, and shows a rating panel after an accepted submission. |
 | Smart review plan | Uses the `FSRS` spaced repetition algorithm to schedule the next review based on your mastery feedback. |
 | Today's review | Shows problems due today, completed problems, and overdue problems in the popup. |
-| Full problem library | View all problems in a standalone page with filters, mastery, details, and note editing. |
+| Hot recommendations | View CodeTop company hot questions in the popup, with local recommendation reasons from your review history. |
+| Full problem library | Switch between Full Library / Company Hot List in the standalone page, with local filters, mastery, details, notes, and hot-list coverage. |
 | Markdown notes | Each problem can have its own note, with preview, editing, and local export. |
 | Official announcements | Reads announcements, version notices, repository links, and download links from the remote service. |
 | Reminders and weekly reports | Supports desktop reminders and optional weekly review emails. |
@@ -178,7 +174,7 @@ After you submit an accepted solution, it records the problem, schedules the nex
 
 1. Solve and submit problems on LeetCode as usual.
 2. After Accepted, choose your mastery level: `No clue`, `Hard`, `Normal`, or `Too easy`.
-3. Open the extension popup to review today's plan and official announcements.
+3. Open the extension popup to review today's plan, hot recommendations, and official announcements.
 4. Write Markdown notes from the problem page, popup, or full library page.
 5. Configure reminders, weekly digest email, import/export, notes export, and optional cloud sync from the settings page.
 
@@ -196,7 +192,7 @@ Cloud sync is optional. Once enabled, the extension tries to upload a cloud snap
 - **Stronger data storage**: Move large amounts of problems and notes to `IndexedDB` so the extension remains smooth.
 - **More granular sync strategy**: Add conflict merging, sync history, data encryption, and a friendlier restore flow.
 - **Review analytics**: Show weak tags, overdue trends, and problems you often forget.
-- **AI-assisted review**: Summarize causes of mistakes and common patterns from notes when users actively opt in.
+- **AI summary / plan boundary**: The current release keeps the data contract only; provider-backed user-visible experiences will come in later versions.
 - **Automated release**: Use `GitHub Actions` to automatically test, build, package, and release versions.
 
 ---
@@ -214,6 +210,10 @@ npm run build
 ### Environment
 
 Runtime service endpoints and cloud-sync credentials are provided through local environment files during development and build. Do not commit real deployment details, service keys, or private operational notes to the public repository.
+
+Optional build-time endpoints:
+
+- `VITE_CRUSH_CODETOP_BASE_URL`: CodeTop metadata API base URL. Defaults to `https://mail.crushlc.site/codetop`.
 
 ### Project Layout
 

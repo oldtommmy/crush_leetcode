@@ -171,6 +171,10 @@ export function DailyPlan({
     chrome.runtime.openOptionsPage();
   };
 
+  const openLibrary = () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('library.html') });
+  };
+
   const deferredLabel = locale === 'zh-CN'
     ? `还有 ${deferredCount} ${t(locale, 'queuedReviews')}`
     : `${deferredCount} ${t(locale, 'queuedReviews')}`;
@@ -246,10 +250,21 @@ export function DailyPlan({
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="rounded-xl bg-neutral-50 p-3.5 dark:bg-neutral-800/50">
+            <button
+              type="button"
+              className="group rounded-xl bg-neutral-50 p-3.5 text-left transition hover:bg-neutral-100 active:scale-[0.98] dark:bg-neutral-800/50 dark:hover:bg-neutral-800"
+              onClick={openLibrary}
+              title={locale === 'zh-CN' ? '打开完整题库工作台' : 'Open problem library'}
+            >
               <div className="text-lg font-black text-neutral-900 dark:text-neutral-100">{stats.totalProblems}</div>
-              <div className="text-[10px] font-bold uppercase text-neutral-500">{t(locale, 'problemLibrary')}</div>
-            </div>
+              <div className="flex items-center gap-1 text-[10px] font-bold uppercase text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300">
+                <span>{t(locale, 'problemLibrary')}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 17 17 7" />
+                  <path d="M7 7h10v10" />
+                </svg>
+              </div>
+            </button>
             <div className="rounded-xl bg-rose-50 p-3.5 dark:bg-rose-500/5">
               <div className="text-lg font-black text-rose-500">{stats.overdueCount}</div>
               <div className="text-[10px] font-bold uppercase text-rose-500 opacity-70">{t(locale, 'statsOverdue')}</div>

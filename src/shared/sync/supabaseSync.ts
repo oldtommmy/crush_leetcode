@@ -67,7 +67,7 @@ function assertConfig(config: SupabaseSyncSettings): { supabaseUrl: string; anon
   }
   const normalized = syncKey.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (WEAK_SYNC_KEYS.has(normalized) || /^(\w)\1+$/.test(normalized)) {
-    throw new Error('This recovery code is too easy to guess. Use your email plus a private phrase, or generate a random one.');
+    throw new Error('This recovery code is too easy to guess. Use your email plus a private phrase.');
   }
 
   return { supabaseUrl, anonKey, syncKey };

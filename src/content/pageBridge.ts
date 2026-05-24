@@ -1,6 +1,10 @@
 const BRIDGE_SCRIPT_ID = 'crush-leetcode-page-bridge';
 const ACCEPTED_MESSAGE_TYPE = 'QUIZ_RECALL_ACCEPTED_SUBMISSION';
 
+export interface AcceptedSubmissionContext {
+  pathname?: string;
+}
+
 export function installLeetCodeSubmissionBridge(): void {
   if (document.getElementById(BRIDGE_SCRIPT_ID)) {
     return;
@@ -13,7 +17,7 @@ export function installLeetCodeSubmissionBridge(): void {
   script.addEventListener('load', () => script.remove());
 }
 
-export function listenForAcceptedBridge(onAccepted: () => void): () => void {
+export function listenForAcceptedBridge(onAccepted: (context?: AcceptedSubmissionContext) => void): () => void {
   let lastAcceptedAt = 0;
   const listener = (event: MessageEvent) => {
     if (event.source !== window || event.data?.type !== ACCEPTED_MESSAGE_TYPE) {
@@ -24,7 +28,7 @@ export function listenForAcceptedBridge(onAccepted: () => void): () => void {
       return;
     }
     lastAcceptedAt = now;
-    onAccepted();
+    onAccepted({ pathname: typeof event.data.pathname === 'string' ? event.data.pathname : undefined });
   };
 
   window.addEventListener('message', listener);
