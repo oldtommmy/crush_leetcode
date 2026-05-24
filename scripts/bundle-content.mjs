@@ -24,6 +24,7 @@ for (const file of ['.env.local', '.env']) {
 const define = {
   __CRUSH_ANNOUNCEMENTS_URL__: JSON.stringify(process.env.VITE_CRUSH_ANNOUNCEMENTS_URL || ''),
   __CRUSH_DAILY_COMPLETION_MESSAGES_URL__: JSON.stringify(process.env.VITE_CRUSH_DAILY_COMPLETION_MESSAGES_URL || ''),
+  __CRUSH_CODETOP_BASE_URL__: JSON.stringify(process.env.VITE_CRUSH_CODETOP_BASE_URL || ''),
   __CRUSH_SUPABASE_URL__: JSON.stringify(process.env.VITE_CRUSH_SUPABASE_URL || ''),
   __CRUSH_SUPABASE_ANON_KEY__: JSON.stringify(process.env.VITE_CRUSH_SUPABASE_ANON_KEY || '')
 };
