@@ -56,7 +56,7 @@ function enqueueReviewWrite<T>(task: () => Promise<T>): Promise<T> {
 }
 
 async function runReminderCheck(): Promise<DueProblem[]> {
-  let state = await getState();
+  const state = await getState();
   const now = new Date();
   const today = todayDateString(now);
   const dueProblems = selectDueProblems(state, now);
@@ -65,11 +65,16 @@ async function runReminderCheck(): Promise<DueProblem[]> {
   const dailyRemainingProblems = selectDailyRemainingProblems(state, now, remainingGoalSlots);
   const timestamp = now.toISOString();
 
+  // A2: side effects (notify / email / export) can take a while; other contexts
+  // may write during those awaits. So we never write back the whole `state`
+  // snapshot captured above. Instead each marker is committed through
+  // updateState, which re-reads fresh state and only touches the delivery
+  // metadata fields, leaving concurrent problem/settings edits intact.
+
   if (state.settings.reminders.enabled && dailyRemainingProblems.length > 0 && shouldSendDailyNotification(state, today)) {
     try {
       await notifyDailyPlan(dailyRemainingProblems, state.settings.locale);
-      state = markDailyNotificationSent(state, today, timestamp);
-      await setState(state);
+      await updateState((latest) => markDailyNotificationSent(latest, today, timestamp));
     } catch (error) {
       console.warn('Failed to create daily review notification.', error);
     }
@@ -80,41 +85,41 @@ async function runReminderCheck(): Promise<DueProblem[]> {
     const attemptTimestamp = new Date().toISOString();
     try {
       await sendWeeklySummaryEmail(weeklySummary, dueProblems, state.settings.emailWebhook, state.settings.locale);
-      const nextState = markWeeklySummarySent(
-        {
-          ...state,
-          settings: {
-            ...state.settings,
-            emailWebhook: {
-              ...state.settings.emailWebhook,
-              lastSentAt: attemptTimestamp,
-              lastError: undefined
+      await updateState((latest) =>
+        markWeeklySummarySent(
+          {
+            ...latest,
+            settings: {
+              ...latest.settings,
+              emailWebhook: {
+                ...latest.settings.emailWebhook,
+                lastSentAt: attemptTimestamp,
+                lastError: undefined
+              }
             }
-          }
-        },
-        today,
-        attemptTimestamp
+          },
+          today,
+          attemptTimestamp
+        )
       );
-      await setState(nextState);
-      state = nextState;
     } catch (error) {
-      const nextState = markEmailFailure(
-        {
-          ...state,
-          settings: {
-            ...state.settings,
-            emailWebhook: {
-              ...state.settings.emailWebhook,
-              lastError: error instanceof Error ? error.message : String(error)
+      await updateState((latest) =>
+        markEmailFailure(
+          {
+            ...latest,
+            settings: {
+              ...latest.settings,
+              emailWebhook: {
+                ...latest.settings.emailWebhook,
+                lastError: error instanceof Error ? error.message : String(error)
+              }
             }
-          }
-        },
-        'weekly-summary',
-        error,
-        attemptTimestamp
+          },
+          'weekly-summary',
+          error,
+          attemptTimestamp
+        )
       );
-      await setState(nextState);
-      state = nextState;
     }
   }
 
@@ -122,9 +127,7 @@ async function runReminderCheck(): Promise<DueProblem[]> {
     const exportTimestamp = new Date().toISOString();
     try {
       const result = await exportWeeklyReportHtml(weeklySummary, dueProblems, state.settings.locale, now);
-      const nextState = markWeeklyReportExported(state, today, exportTimestamp);
-      await setState(nextState);
-      state = nextState;
+      await updateState((latest) => markWeeklyReportExported(latest, today, exportTimestamp));
       try {
         await notifyWeeklyReportExported(result.filename, state.settings.locale);
       } catch (notificationError) {
@@ -139,7 +142,7 @@ async function runReminderCheck(): Promise<DueProblem[]> {
 }
 
 async function exportWeeklyReport(): Promise<{ filename: string; downloadId: number }> {
-  let state = await getState();
+  const state = await getState();
   const now = new Date();
   const dueProblems = selectDueProblems(state, now);
   const summary = selectWeeklySummaryStats(state, now);
@@ -148,13 +151,13 @@ async function exportWeeklyReport(): Promise<{ filename: string; downloadId: num
   }
 
   const result = await exportWeeklyReportHtml(summary, dueProblems, state.settings.locale, now);
-  state = markWeeklyReportExported(state, todayDateString(now), now.toISOString());
-  await setState(state);
+  // A2: commit only the export marker against fresh state, not the pre-export snapshot.
+  await updateState((latest) => markWeeklyReportExported(latest, todayDateString(now), now.toISOString()));
   return result;
 }
 
 async function sendTestEmail(): Promise<void> {
-  let state = await getState();
+  const state = await getState();
   const dueProblems = selectDueProblems(state);
   const summary = selectWeeklySummaryStats(state);
   if (summary.totalProblems === 0) {
@@ -173,39 +176,41 @@ async function sendTestEmail(): Promise<void> {
     await sendWeeklySummaryEmail(summary, dueProblems, state.settings.emailWebhook, state.settings.locale, {
       requireConfigured: true
     });
-    state = markWeeklySummarySent(
-      {
-        ...state,
-        settings: {
-          ...state.settings,
-          emailWebhook: {
-            ...state.settings.emailWebhook,
-            lastSentAt: timestamp,
-            lastError: undefined
+    await updateState((latest) =>
+      markWeeklySummarySent(
+        {
+          ...latest,
+          settings: {
+            ...latest.settings,
+            emailWebhook: {
+              ...latest.settings.emailWebhook,
+              lastSentAt: timestamp,
+              lastError: undefined
+            }
           }
-        }
-      },
-      today,
-      timestamp
+        },
+        today,
+        timestamp
+      )
     );
-    await setState(state);
   } catch (error) {
-    state = markEmailFailure(
-      {
-        ...state,
-        settings: {
-          ...state.settings,
-          emailWebhook: {
-            ...state.settings.emailWebhook,
-            lastError: error instanceof Error ? error.message : String(error)
+    await updateState((latest) =>
+      markEmailFailure(
+        {
+          ...latest,
+          settings: {
+            ...latest.settings,
+            emailWebhook: {
+              ...latest.settings.emailWebhook,
+              lastError: error instanceof Error ? error.message : String(error)
+            }
           }
-        }
-      },
+        },
         'weekly-summary',
         error,
         timestamp
-      );
-    await setState(state);
+      )
+    );
     throw error;
   }
 }

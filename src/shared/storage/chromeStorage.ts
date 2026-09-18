@@ -552,6 +552,7 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
       debugActivePreset: input?.metadata?.debugActivePreset,
       debugCoveredPresets: normalizeDebugPresets(input?.metadata?.debugCoveredPresets),
       storageBackend: 'local',
+      revision: typeof input?.metadata?.revision === 'number' ? input.metadata.revision : undefined,
       reminderDelivery: normalizeReminderDelivery(input?.metadata?.reminderDelivery),
       dismissedAnnouncementIds: Array.isArray(input?.metadata?.dismissedAnnouncementIds)
         ? input.metadata.dismissedAnnouncementIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
@@ -569,30 +570,55 @@ export async function getState(): Promise<ExtensionStorageState> {
 
 async function writeStateNow(state: ExtensionStorageState): Promise<void> {
   assertStateFitsStorage(state);
-  await chrome.storage.local.set({
-    [STORAGE_KEY]: {
-      ...state,
-      metadata: {
-        ...state.metadata,
-        storageBackend: 'local'
-      }
+  const nextRevision = (state.metadata.revision ?? 0) + 1;
+  const persisted: ExtensionStorageState = {
+    ...state,
+    metadata: {
+      ...state.metadata,
+      storageBackend: 'local',
+      revision: nextRevision
     }
+  };
+  await chrome.storage.local.set({
+    [STORAGE_KEY]: persisted
   });
-  scheduleAutoCloudSync(state);
+  scheduleAutoCloudSync(persisted);
 }
 
 export async function setState(state: ExtensionStorageState): Promise<void> {
   return enqueueStateWrite(() => writeStateNow(state));
 }
 
+/**
+ * Number of times updateState re-runs the updater when a concurrent write from
+ * another context (popup / options / library / service worker) lands between
+ * our read and write.
+ */
+const MAX_UPDATE_RETRIES = 5;
+
 export async function updateState(
   updater: (state: ExtensionStorageState) => ExtensionStorageState | Promise<ExtensionStorageState>
 ): Promise<ExtensionStorageState> {
   return enqueueStateWrite(async () => {
-    const state = await getState();
-    const nextState = await updater(state);
-    await writeStateNow(nextState);
-    return nextState;
+    // A2: the in-process write queue only serializes writes originating in THIS
+    // JS context. Other contexts share chrome.storage.local, so we guard against
+    // lost updates with an optimistic revision check: read -> apply -> verify the
+    // stored revision is unchanged -> write. On conflict we re-read the fresh
+    // state and re-apply the updater, so no context's write silently clobbers
+    // another's.
+    for (let attempt = 0; ; attempt += 1) {
+      const state = await getState();
+      const baseRevision = state.metadata.revision ?? 0;
+      const nextState = await updater(state);
+
+      const latest = await getState();
+      const latestRevision = latest.metadata.revision ?? 0;
+      if (latestRevision === baseRevision || attempt >= MAX_UPDATE_RETRIES) {
+        await writeStateNow(nextState);
+        return nextState;
+      }
+      // A concurrent write happened; retry against the fresh state.
+    }
   });
 }
 
