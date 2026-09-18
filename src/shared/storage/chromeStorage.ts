@@ -9,6 +9,7 @@ import { problemIdFor } from '../review/scheduler';
 import { FSRSScheduler } from '../review/fsrsScheduler';
 import { normalizeReminderDelivery } from '../reminders/delivery';
 import { uploadSupabaseSnapshot } from '../sync/supabaseSync';
+import { pruneReviewLogs } from './retention';
 import {
   DebugScenarioPreset,
   ExtensionStorageState,
@@ -569,12 +570,18 @@ export async function getState(): Promise<ExtensionStorageState> {
 }
 
 async function writeStateNow(state: ExtensionStorageState): Promise<void> {
-  assertStateFitsStorage(state);
-  const nextRevision = (state.metadata.revision ?? 0) + 1;
+  // A1: bound the only unbounded field so heavy long-term users never grow the
+  // single-key blob past the storage cap. Keep the newest N logs per problem.
+  const prunedLogs = pruneReviewLogs(state.reviewLogsById);
+  const stateToPersist =
+    prunedLogs === state.reviewLogsById ? state : { ...state, reviewLogsById: prunedLogs };
+
+  assertStateFitsStorage(stateToPersist);
+  const nextRevision = (stateToPersist.metadata.revision ?? 0) + 1;
   const persisted: ExtensionStorageState = {
-    ...state,
+    ...stateToPersist,
     metadata: {
-      ...state.metadata,
+      ...stateToPersist.metadata,
       storageBackend: 'local',
       revision: nextRevision
     }
