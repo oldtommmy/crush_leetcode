@@ -625,7 +625,26 @@ export async function importState(input: unknown): Promise<ExtensionStorageState
     throw new Error('Invalid backup file.');
   }
 
-  const state = mergeState(input as Partial<ExtensionStorageState>);
+  const merged = mergeState(input as Partial<ExtensionStorageState>);
+
+  // A4: a backup file must not be able to overwrite the local sync/mailer
+  // credentials. Preserve whatever is already stored on this device instead of
+  // trusting the imported blob. (Cloud restore passes the local syncKey through
+  // its own input, so this preserves the same value it would have applied.)
+  const current = await getState();
+  const state: ExtensionStorageState = {
+    ...merged,
+    settings: {
+      ...merged.settings,
+      cloudSync: current.settings.cloudSync,
+      emailWebhook: {
+        ...merged.settings.emailWebhook,
+        toEmail: current.settings.emailWebhook.toEmail,
+        betaAccessCode: current.settings.emailWebhook.betaAccessCode
+      }
+    }
+  };
+
   await setState(state);
   return state;
 }
