@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="use-iframe" content="true">
+<meta name="html-box-height-mode" content="auto">
+<meta name="description" content="crush_leetcode 优化项优先级散点图：横轴为单人预估修复成本（人日），纵轴为收益与风险消解程度，红色点为一周内可交付的高性价比项，蓝色点为需排期的改造项。">
+<title>优先级散点</title>
+<script src="https://registry.npmmirror.com/echarts/5.5.0/files/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #ffffff; color: #1f2937; }
+  #wrap { width: 100%; padding: 12px 16px 16px; }
+  #chart { width: 100%; height: 500px; }
+  #st { min-height: 20px; font-size: 12px; color: #6b7280; text-align: center; padding: 6px 12px; }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="chart"></div><div id="st" role="status">加载中...</div></div>
+<script>
+(function boot() {
+  const st = document.getElementById("st");
+  function setStatus(t) { if (st) st.textContent = t || ""; }
+
+  if (typeof echarts === "undefined") {
+    setStatus("图表库加载中...");
+    return setTimeout(boot, 150);
+  }
+
+  const chart = echarts.init(document.getElementById("chart"));
+  const RED = "#ef4444";
+  const BLUE = "#2563eb";
+
+  // [成本(人日), 收益(1-10), 名称, 颜色, 标签位置]
+  const ITEMS = [
+    [0.3, 9.3, "A4 导出备份脱敏，去掉同步密钥与邀请码", RED, "right"],
+    [0.5, 8.7, "B1 到期判定统一改为本地时区", RED, "right"],
+    [0.6, 7.9, "C1 URL 轮询改事件驱动 + 题目身份缓存", RED, "right"],
+    [0.5, 6.9, "C2 收紧“提交”按钮判定", RED, "right"],
+    [0.5, 5.7, "D2 网络请求加超时与重试", RED, "right"],
+    [0.3, 5.0, "D1 通知固定 id、先记账后发送", RED, "right"],
+    [2.0, 8.5, "D3 邮件共享密钥换成服务端令牌", BLUE, "right"],
+    [1.6, 7.4, "A2 所有写入收敛到 Service Worker", BLUE, "right"],
+    [5.0, 7.6, "A5 云同步引入账号鉴权", BLUE, "left"],
+    [4.0, 6.9, "A1 存储分片 + 复习日志裁剪", BLUE, "left"],
+    [1.5, 6.2, "E2 Popup 首屏信息重排", BLUE, "right"],
+    [0.6, 5.4, "E1 主题设置真正生效", BLUE, "right"],
+    [1.1, 4.7, "E3 弹窗可访问性 + Toast 替代 alert", BLUE, "right"],
+    [1.0, 4.2, "F1 接入 CI 与 Lint", BLUE, "right"],
+    [0.5, 4.5, "C4 支持竞赛 / explore 路径", BLUE, "right"]
+  ];
+
+  const option = {
+    animation: false,
+    title: {
+      text: "优化项优先级：修复成本 × 收益",
+      subtext: "红色 = 一周内即可交付的高性价比项　　蓝色 = 需要排期投入的改造项",
+      left: "center",
+      textStyle: { fontSize: 17, fontWeight: 650, color: "#111827" },
+      subtextStyle: { fontSize: 12, color: "#6b7280" }
+    },
+    tooltip: {
+      trigger: "item",
+      formatter: function (p) {
+        return p.data.name + "<br/>预估成本：" + p.value[0] + " 人日<br/>收益评分：" + p.value[1] + " / 10";
+      }
+    },
+    grid: { left: 66, right: 230, top: 84, bottom: 56 },
+    xAxis: {
+      type: "value",
+      name: "修复成本（人日，单人预估）",
+      nameLocation: "middle",
+      nameGap: 30,
+      min: 0,
+      max: 6,
+      splitLine: { lineStyle: { color: "#eef2f7" } }
+    },
+    yAxis: {
+      type: "value",
+      name: "收益 / 风险消解",
+      nameGap: 18,
+      min: 3.6,
+      max: 10,
+      splitLine: { lineStyle: { color: "#eef2f7" } }
+    },
+    series: [{
+      type: "scatter",
+      symbolSize: 15,
+      data: ITEMS.map(function (d) {
+        return {
+          value: [d[0], d[1]],
+          name: d[2],
+          itemStyle: { color: d[3], opacity: 0.92 },
+          label: { position: d[4], color: d[3] === "#ef4444" ? "#b91c1c" : "#1e40af" }
+        };
+      }),
+      label: {
+        show: true,
+        formatter: function (p) { return p.data.name; },
+        fontSize: 11,
+        distance: 9
+      },
+      labelLayout: { moveOverlap: "shiftY", hideOverlap: false },
+      markLine: {
+        silent: true,
+        symbol: "none",
+        lineStyle: { type: "dashed", color: "#cbd5e1" },
+        label: { show: false },
+        data: [{ xAxis: 1.2 }, { yAxis: 6.5 }]
+      }
+    }]
+  };
+
+  try {
+    chart.setOption(option, true);
+    setStatus("左上象限（成本 ≤ 1.2 人日、收益 ≥ 6.5 分）是本轮最该先动手的区域");
+  } catch (err) {
+    setStatus("图表渲染失败: " + (err && err.message ? err.message : String(err)));
+    console.error(err);
+  }
+
+  window.addEventListener("resize", function () { chart.resize(); });
+})();
+</script>
+</body>
+</html>

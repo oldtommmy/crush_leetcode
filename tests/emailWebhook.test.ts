@@ -16,7 +16,7 @@ describe('emailWebhook', () => {
     vi.stubGlobal('fetch', vi.fn());
   });
 
-  it('skips automatic digest delivery when the build has no mailer secret', async () => {
+  it('skips automatic digest delivery when no beta access code is configured', async () => {
     await expect(
       sendWeeklySummaryEmail(summary, [], { enabled: true, toEmail: 'review@example.com' }, 'en')
     ).resolves.toBeUndefined();
@@ -24,11 +24,32 @@ describe('emailWebhook', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('throws a clear error for manual test delivery when the build has no mailer secret', async () => {
+  it('throws a clear error for manual test delivery when no beta access code is configured', async () => {
     await expect(
       sendWeeklySummaryEmail(summary, [], { enabled: true, toEmail: 'review@example.com' }, 'en', {
         requireConfigured: true
       })
-    ).rejects.toThrow('Official mailer is not configured in this build.');
+    ).rejects.toThrow('Official digest requires the beta access code');
+  });
+
+  it('does not send a compiled-in shared secret header (D3)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await sendWeeklySummaryEmail(
+      summary,
+      [],
+      { enabled: true, toEmail: 'review@example.com', betaAccessCode: 'BETA-1234' },
+      'en',
+      { requireConfigured: true }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    expect(headers['X-Crush-Secret']).toBeUndefined();
+    expect(Object.keys(headers)).toEqual(['Content-Type']);
+    // The per-user access code travels in the body, validated server-side.
+    expect(JSON.parse(init?.body as string).betaAccessCode).toBe('BETA-1234');
   });
 });

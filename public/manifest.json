@@ -32,13 +32,13 @@
   "options_page": "options.html",
   "content_scripts": [
     {
-      "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
+      "matches": ["https://leetcode.com/problems/*", "https://leetcode.cn/problems/*"],
       "js": ["assets/pageBridgeInjected.js"],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
-      "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
+      "matches": ["https://leetcode.com/problems/*", "https://leetcode.cn/problems/*"],
       "js": ["assets/content.js"],
       "run_at": "document_idle"
     }

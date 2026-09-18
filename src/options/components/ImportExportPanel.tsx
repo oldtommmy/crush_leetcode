@@ -7,6 +7,7 @@ import {
   uploadSupabaseSnapshot
 } from '../../shared/sync/supabaseSync';
 import { updateState } from '../../shared/storage/chromeStorage';
+import { buildBackupExport } from '../../shared/storage/backup';
 
 interface ImportExportPanelProps {
   state: ExtensionStorageState;
@@ -45,7 +46,8 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
   }, [state.settings.cloudSync, editingRecoveryCode]);
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const backup = buildBackupExport(state);
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
