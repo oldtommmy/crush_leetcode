@@ -8,9 +8,8 @@ import type {
   WeeklyTagCount
 } from '../shared/types';
 
-const OFFICIAL_MAILER_SECRET = import.meta.env.VITE_CRUSH_MAILER_SECRET || '';
 const DEFAULT_OFFICIAL_MAILER_BASE_URL = 'https://mail.crushlc.site';
-const MISSING_SECRET_MESSAGE = 'Official mailer is not configured in this build. Set VITE_CRUSH_MAILER_SECRET to enable email delivery.';
+const MISSING_ACCESS_CODE_MESSAGE = 'Official digest requires the beta access code from your confirmation email.';
 const WEEKLY_EMAIL_CARD_LIMIT = 3;
 
 type WeeklyEmailProblemCard = Pick<
@@ -106,14 +105,14 @@ function createWeeklySummaryPayload(
   };
 }
 
-function hasOfficialMailerSecret(): boolean {
-  return Boolean(OFFICIAL_MAILER_SECRET);
-}
-
 function officialMailerHeaders(): Record<string, string> {
+  // D3: no shared secret is shipped in the bundle. A Chrome extension is a
+  // public zip, so any compiled-in `X-Crush-Secret` would be trivially
+  // extractable and lets anyone drive the send endpoint. Per-user auth is
+  // carried by the beta access code in the request body; the server is
+  // responsible for validating it and rate-limiting by installId/email.
   return {
-    'Content-Type': 'application/json',
-    'X-Crush-Secret': OFFICIAL_MAILER_SECRET
+    'Content-Type': 'application/json'
   };
 }
 
@@ -170,17 +169,16 @@ export async function sendWeeklySummaryEmail(
     throw new Error('Official digest requires recipient email.');
   }
 
-  if (!hasOfficialMailerSecret()) {
-    if (options.requireConfigured) {
-      throw new Error(MISSING_SECRET_MESSAGE);
-    }
-    console.info('[EmailWebhook] Skipping official digest because mailer secret is not configured.');
-    return;
-  }
-
+  // D3: gating is now based on the per-user beta access code (validated
+  // server-side), not on a compiled-in shared secret. Without a code we skip
+  // automatic delivery quietly and surface a clear error for manual tests.
   const betaAccessCode = normalizeBetaAccessCode(settings.betaAccessCode);
   if (!betaAccessCode) {
-    throw new Error('Official digest beta access code is required.');
+    if (options.requireConfigured) {
+      throw new Error(MISSING_ACCESS_CODE_MESSAGE);
+    }
+    console.info('[EmailWebhook] Skipping official digest because no beta access code is configured.');
+    return;
   }
 
   const payload = createWeeklySummaryPayload(summary, dueProblems, settings, locale);

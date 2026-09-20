@@ -1,4 +1,5 @@
 import { createRoot, type Root } from 'react-dom/client';
+import { bootstrapTheme } from '../shared/themeBootstrap';
 
 const HOST_ID = 'crush-leetcode-host';
 const ROOT_ID = 'crush-leetcode-root';
@@ -36,6 +37,10 @@ export function ensureInjectedRoot(): { element: HTMLElement; root: Root } {
     element = document.createElement('div');
     element.id = ROOT_ID;
     shadowRoot.appendChild(element);
+    // Shadow DOM red line (UI plan §4.4): the outer html.dark selector cannot
+    // cross the shadow boundary, so the theme class must be applied to this
+    // inner root directly and kept in sync with the stored themeMode.
+    bootstrapTheme(element);
   }
 
   const existingRoot = (element as HTMLElement & { __quizRecallRoot?: Root }).__quizRecallRoot;

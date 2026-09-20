@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DAILY_ALARM_NAME } from '../shared/constants';
+import { DAILY_ALARM_NAME, PET_SIZE_PIXELS } from '../shared/constants';
 import { nextLocalTime } from '../shared/date';
 import {
   applyDebugScenarioPreset,
@@ -209,29 +209,46 @@ export function OptionsApp() {
   if (!state) return null;
   const locale = state.settings.locale;
   const totalProblems = Object.keys(state.problemsById).length;
+  const themeMode = state.settings.themeMode;
+  const themeOptions: Array<{ value: UserSettings['themeMode']; label: string }> = [
+    { value: 'system', label: locale === 'zh-CN' ? '跟随系统' : 'System' },
+    { value: 'light', label: locale === 'zh-CN' ? '浅色' : 'Light' },
+    { value: 'dark', label: locale === 'zh-CN' ? '深色' : 'Dark' }
+  ];
+  const setThemeMode = (mode: UserSettings['themeMode']) => {
+    void saveSettings({ ...state.settings, themeMode: mode });
+  };
+  const petSizeOptions: Array<{ value: UserSettings['petSize']; label: string }> = [
+    { value: 'small', label: locale === 'zh-CN' ? `小号 ${PET_SIZE_PIXELS.small}px` : `Small ${PET_SIZE_PIXELS.small}px` },
+    { value: 'medium', label: locale === 'zh-CN' ? `默认 ${PET_SIZE_PIXELS.medium}px` : `Default ${PET_SIZE_PIXELS.medium}px` },
+    { value: 'large', label: locale === 'zh-CN' ? `大号 ${PET_SIZE_PIXELS.large}px` : `Large ${PET_SIZE_PIXELS.large}px` }
+  ];
+  const setPetSize = (petSize: UserSettings['petSize']) => {
+    void saveSettings({ ...state.settings, petSize });
+  };
 
   return (
-    <main className="min-h-screen bg-[#f7f8fa] pb-20 text-neutral-900 dark:bg-[#1a1a1a] dark:text-neutral-100 font-sans">
-      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/80 px-6 py-4 backdrop-blur-md dark:border-neutral-800 dark:bg-[#262626]/80">
+    <main className="min-h-screen bg-bg pb-20 text-text font-sans">
+      <header className="sticky top-0 z-10 border-b border-border-soft bg-surface px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl"
+              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-sm"
               onClick={handleLogoClick}
               title={state.metadata.debugMode ? 'Debug Tools enabled' : undefined}
             >
               <img src="/icons/icon.png" alt="Logo" className="h-full w-full object-cover" />
             </button>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">Crush LeetCode</h1>
-              <p className="text-xs font-medium text-neutral-500">{t(locale, 'tagline')}</p>
+              <h1 className="text-lg font-semibold tracking-tight">Crush LeetCode</h1>
+              <p className="text-xs font-medium text-text-2">{t(locale, 'tagline')}</p>
             </div>
           </div>
 
           {message && (
-            <div className={`fixed bottom-8 right-8 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-4 ${
-              message.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+            <div className={`fixed bottom-8 right-8 z-50 flex items-center gap-2 rounded-sm px-4 py-3 text-sm font-semibold shadow-lg transition-all clc-fade-in ${
+              message.type === 'success' ? 'bg-success text-white' : 'bg-danger text-white'
             }`}>
               {message.type === 'success' ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -247,6 +264,56 @@ export function OptionsApp() {
       <div className="mx-auto mt-8 max-w-6xl px-6">
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,760px)_320px] lg:justify-center">
           <div className="space-y-5">
+            {/* Appearance / theme */}
+            <section className="rounded-m border border-border-soft bg-surface p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-text">
+                {locale === 'zh-CN' ? '外观' : 'Appearance'}
+              </h2>
+              <p className="mt-1 text-xs text-text-2">
+                {locale === 'zh-CN' ? '选择配色主题，四个界面实时生效。' : 'Choose a color theme; applies live across all views.'}
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-surface-2 p-1">
+                {themeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                      themeMode === option.value
+                        ? 'bg-surface text-text shadow-sm'
+                        : 'text-text-2 hover:text-text'
+                    }`}
+                    onClick={() => setThemeMode(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-5 border-t border-border-soft pt-5">
+                <h3 className="text-sm font-semibold text-text">
+                  {locale === 'zh-CN' ? '悬浮 Logo 大小' : 'Floating logo size'}
+                </h3>
+                <p className="mt-1 text-xs text-text-2">
+                  {locale === 'zh-CN' ? '调整 LeetCode 页面上悬浮 Logo 的大小，已打开页面会立即更新。' : 'Adjust the floating Logo on LeetCode pages; open pages update immediately.'}
+                </p>
+                <div className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-surface-2 p-1">
+                  {petSizeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`rounded-full px-2 py-2 text-xs font-semibold transition ${
+                        state.settings.petSize === option.value
+                          ? 'bg-surface text-text shadow-sm'
+                          : 'text-text-2 hover:text-text'
+                      }`}
+                      onClick={() => setPetSize(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
             <ReminderSettings
               settings={state.settings}
               onChange={saveSettings}
@@ -276,12 +343,12 @@ export function OptionsApp() {
                 onDismiss={dismissAnnouncement}
               />
             ) : null}
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-[#262626]">
+            <div className="rounded-m border border-border-soft bg-surface p-5 shadow-sm">
             <InstallationCheck settings={state.settings} totalProblems={totalProblems} locale={locale} />
-            <div className="my-5 h-px bg-neutral-100 dark:bg-neutral-800" />
+            <div className="my-5 h-px bg-border-soft" />
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 px-4 py-3 text-sm font-black text-white transition-all hover:bg-black active:scale-95 dark:bg-white dark:text-neutral-900"
+              className="flex w-full items-center justify-center gap-3 rounded-sm bg-brand px-4 py-3 text-sm font-semibold text-white shadow-brand transition-transform duration-200 ease-spring hover:-translate-y-0.5 active:scale-95"
               onClick={openProblemLibrary}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -292,32 +359,32 @@ export function OptionsApp() {
               {locale === 'zh-CN' ? '打开完整题库' : 'Open library'}
             </button>
 
-            <div className="my-5 h-px bg-neutral-100 dark:bg-neutral-800" />
-            <div className="text-amber-600 dark:text-amber-500">
-              <h3 className="flex items-center gap-2 text-sm font-bold">
+            <div className="my-5 h-px bg-border-soft" />
+            <div className="text-brand-strong">
+              <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 {t(locale, 'proTip')}
               </h3>
-              <p className="mt-2 text-xs leading-relaxed opacity-80">
+              <p className="mt-2 text-xs leading-relaxed text-text-2">
                 {t(locale, 'proTipDesc')}
               </p>
             </div>
-            <div className="my-5 h-px bg-neutral-100 dark:bg-neutral-800" />
+            <div className="my-5 h-px bg-border-soft" />
 
             {state.metadata.debugMode && (
-              <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-6 text-violet-700 dark:text-violet-300">
+              <div className="rounded-m border border-border bg-surface-2 p-6 text-text">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="text-sm font-bold">Debug Tools</h3>
-                    <p className="mt-1 text-xs opacity-80">One-click QA presets to visually verify all key states. Tap the logo 7 times again to hide this panel.</p>
+                    <h3 className="text-sm font-semibold">Debug Tools</h3>
+                    <p className="mt-1 text-xs text-text-2">One-click QA presets to visually verify all key states. Tap the logo 7 times again to hide this panel.</p>
                   </div>
-                  <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
+                  <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white">
                     Debug On
                   </span>
                 </div>
                 <button
                   type="button"
-                  className="mt-4 w-full rounded-xl border border-violet-500/20 bg-white px-4 py-3 text-sm font-bold text-violet-700 transition-all hover:border-violet-500 hover:bg-violet-50 dark:bg-[#262626] dark:text-violet-300 dark:hover:bg-violet-500/10"
+                  className="mt-4 w-full rounded-sm border border-border bg-surface px-4 py-3 text-sm font-semibold text-text transition-all hover:bg-surface-2"
                   onClick={() => void loadDemoData()}
                 >
                   Load QA coverage pack
@@ -327,10 +394,10 @@ export function OptionsApp() {
                     <button
                       key={preset}
                       type="button"
-                      className={`rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                      className={`rounded-xs px-3 py-2 text-xs font-semibold transition-all ${
                         state.metadata.debugActivePreset === preset
-                          ? 'bg-violet-600 text-white'
-                          : 'bg-white text-violet-700 hover:bg-violet-50 dark:bg-[#262626] dark:text-violet-300'
+                          ? 'bg-brand text-white'
+                          : 'bg-surface text-text-2 hover:bg-surface-2'
                       }`}
                       onClick={() => void applyScenario(preset)}
                     >
@@ -344,7 +411,7 @@ export function OptionsApp() {
                     return (
                       <span
                         key={`covered-${preset}`}
-                        className={`rounded-full px-2 py-1 ${covered ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'}`}
+                        className={`rounded-full px-2 py-1 ${covered ? 'bg-easy-soft text-easy-ink' : 'bg-surface-2 text-text-2'}`}
                       >
                         {covered ? 'Checked' : 'Pending'}: {preset}
                       </span>
@@ -359,7 +426,7 @@ export function OptionsApp() {
                 href="https://github.com/oldtommmy/crush_leetcode"
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-center gap-3 rounded-xl bg-neutral-900 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-black active:scale-95 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                className="flex items-center justify-center gap-3 rounded-sm bg-brand px-4 py-3 text-sm font-semibold text-white shadow-brand transition-transform duration-200 ease-spring hover:-translate-y-0.5 active:scale-95"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.44-1.304.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -368,7 +435,7 @@ export function OptionsApp() {
               </a>
               <button
                 onClick={() => setShowDonate(true)}
-                className="flex w-full items-center justify-center gap-3 rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600 transition-all hover:bg-rose-100 active:scale-95 dark:bg-rose-500/10 dark:text-rose-400"
+                className="flex w-full items-center justify-center gap-3 rounded-sm border border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-text-2 transition-all duration-200 ease-standard hover:bg-surface active:scale-95"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
@@ -388,14 +455,14 @@ export function OptionsApp() {
 
       {/* Donation Modal */}
       {showDonate && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-xs overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-[#262626] animate-in zoom-in-95 duration-200">
-            <div className="bg-rose-500 p-8 text-center text-white">
-              <h3 className="text-xl font-bold">{t(locale, 'buyMeATea')}</h3>
-              <p className="mt-2 text-sm opacity-90 text-rose-50">感谢你的支持！❤️</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-6 clc-fade-in">
+          <div className="w-full max-w-xs overflow-hidden rounded-lg bg-elevated shadow-lg clc-modal-in">
+            <div className="bg-surface-2 p-8 text-center">
+              <h3 className="text-xl font-semibold text-text">{t(locale, 'buyMeATea')}</h3>
+              <p className="mt-2 text-sm text-text-2">感谢你的支持！❤️</p>
             </div>
             <div className="p-8 text-center">
-              <div className="mx-auto aspect-square w-48 overflow-hidden rounded-2xl bg-neutral-100 shadow-inner">
+              <div className="mx-auto aspect-square w-48 overflow-hidden rounded-m bg-surface-2">
                 <img
                   src="/icons/wechat-pay.png"
                   alt="WeChat Pay"
@@ -407,7 +474,7 @@ export function OptionsApp() {
               </div>
               <button
                 onClick={() => setShowDonate(false)}
-                className="mt-8 w-full rounded-xl bg-neutral-900 py-3 text-sm font-bold text-white transition-all hover:bg-black active:scale-95 dark:bg-white dark:text-neutral-900"
+                className="mt-8 w-full rounded-sm border border-border bg-surface-2 py-3 text-sm font-semibold text-text transition-colors hover:bg-surface active:scale-95"
               >
                 Close
               </button>

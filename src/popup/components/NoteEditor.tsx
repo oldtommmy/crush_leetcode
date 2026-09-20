@@ -49,9 +49,9 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
   const selectedProblem = problems.find((problem) => problem.id === currentProblemId);
 
   const difficultyTone: Record<string, string> = {
-    Easy: 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20',
-    Medium: 'text-amber-600 bg-amber-50 border-amber-100 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20',
-    Hard: 'text-red-600 bg-red-50 border-red-100 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20'
+    Easy: 'text-easy-ink bg-easy-soft border-transparent',
+    Medium: 'text-hard-ink bg-hard-soft border-transparent',
+    Hard: 'text-stuck-ink bg-stuck-soft border-transparent'
   };
 
   const changeProblem = (id: string) => {
@@ -77,18 +77,18 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
   };
 
   return (
-    <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
+    <section className="mt-8 border-t border-border pt-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-bold tracking-tight text-neutral-900 dark:text-neutral-100">{t(locale, 'notes')}</h2>
-        <div className="flex overflow-hidden rounded-lg bg-neutral-100 p-0.5 dark:bg-neutral-800">
+        <h2 className="text-sm font-semibold tracking-tight text-text">{t(locale, 'notes')}</h2>
+        <div className="flex overflow-hidden rounded-sm bg-surface-2 p-0.5">
           <button
-            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${!preview ? 'rounded-md bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+            className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all ${!preview ? 'rounded-xs bg-surface text-text shadow-sm' : 'text-text-2 hover:text-text'}`}
             onClick={() => setPreview(false)}
           >
             {t(locale, 'edit')}
           </button>
           <button
-            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${preview ? 'rounded-md bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+            className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all ${preview ? 'rounded-xs bg-surface text-text shadow-sm' : 'text-text-2 hover:text-text'}`}
             onClick={() => setPreview(true)}
           >
             {t(locale, 'view')}
@@ -100,12 +100,12 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
         <div className="relative">
           <input
             type="text"
-            className="w-full rounded-xl border border-neutral-200 bg-white px-9 py-2 text-xs transition-all focus:border-amber-500 focus:outline-none dark:border-neutral-800 dark:bg-[#262626] dark:text-neutral-100"
+            className="w-full rounded-sm border border-border bg-surface px-9 py-2 text-xs text-text transition-all focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand"
             placeholder={t(locale, 'searchNotes')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
           </svg>
         </div>
@@ -113,30 +113,30 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
         <div className="relative">
           <button
             type="button"
-            className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-left transition-all hover:border-neutral-300 focus:border-amber-500 focus:outline-none dark:border-neutral-800 dark:bg-[#262626] dark:hover:border-neutral-700"
+            className="flex w-full items-center justify-between rounded-m border border-border bg-surface px-4 py-3 text-left transition-all hover:border-border focus:border-brand focus:outline-none"
             onClick={() => setPickerOpen((open) => !open)}
           >
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3">
                 {t(locale, 'selectProblem')}
               </div>
               {selectedProblem ? (
                 <>
-                  <div className="truncate text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                  <div className="truncate text-sm font-semibold text-text">
                     {displayProblemTitle(selectedProblem, locale)}
                   </div>
-                  <div className="mt-1 flex items-center gap-2 text-[10px] text-neutral-500 dark:text-neutral-400">
-                    <span className={`rounded-md border px-1.5 py-0.5 font-bold ${difficultyTone[selectedProblem.difficulty] ?? 'border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400'}`}>
+                  <div className="mt-1 flex items-center gap-2 text-[10px] text-text-2">
+                    <span className={`rounded-full px-1.5 py-0.5 font-semibold ${difficultyTone[selectedProblem.difficulty] ?? 'bg-surface-2 text-text-2'}`}>
                       {selectedProblem.difficulty}
                     </span>
                     <span className="truncate">{selectedProblem.titleSlug}</span>
                   </div>
                 </>
               ) : (
-                <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{t(locale, 'noMatches')}</div>
+                <div className="text-sm font-medium text-text-2">{t(locale, 'noMatches')}</div>
               )}
             </div>
-            <div className={`ml-3 shrink-0 text-neutral-400 transition-transform ${pickerOpen ? 'rotate-180' : ''}`}>
+            <div className={`ml-3 shrink-0 text-text-3 transition-transform ${pickerOpen ? 'rotate-180' : ''}`}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -144,7 +144,7 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
           </button>
 
           {pickerOpen && (
-            <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl shadow-neutral-200/60 dark:border-neutral-800 dark:bg-[#1f1f1f] dark:shadow-black/30">
+            <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-m border border-border bg-surface shadow-lg">
               <div className="max-h-64 overflow-y-auto p-2">
                 {filteredProblems.length > 0 ? (
                   <div className="space-y-1">
@@ -157,24 +157,24 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
                         <button
                           key={problem.id}
                           type="button"
-                          className={`flex w-full flex-col items-start rounded-xl px-3 py-2.5 text-left transition-all ${
+                          className={`flex w-full flex-col items-start rounded-sm px-3 py-2.5 text-left transition-all ${
                             isSelected
-                              ? 'bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/20'
-                              : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/80'
+                              ? 'bg-brand-soft ring-1 ring-brand'
+                              : 'hover:bg-surface-2'
                           }`}
                           onClick={() => changeProblem(problem.id)}
                         >
                           <div className="flex w-full items-start justify-between gap-2">
-                            <span className="line-clamp-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                            <span className="line-clamp-1 text-sm font-semibold text-text">
                               {displayTitle}
                             </span>
-                            <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${
-                              difficultyTone[problem.difficulty] ?? 'border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400'
+                            <span className={`shrink-0 rounded-xs px-1.5 py-0.5 text-[10px] font-semibold ${
+                              difficultyTone[problem.difficulty] ?? 'bg-surface-2 text-text-2'
                             }`}>
                               {problem.difficulty}
                             </span>
                           </div>
-                          <div className="mt-1 text-[10px] text-neutral-500 dark:text-neutral-400">
+                          <div className="mt-1 text-[10px] text-text-2">
                             {problem.titleSlug}
                           </div>
                           {displayTags.length > 0 && (
@@ -182,7 +182,7 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
                               {displayTags.slice(0, 3).map((tag) => (
                                 <span
                                   key={`${problem.id}-${tag}`}
-                                  className="rounded-md bg-neutral-100 px-1.5 py-0.5 text-[9px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+                                  className="rounded-xs bg-surface-2 px-1.5 py-0.5 text-[9px] font-medium text-text-2"
                                 >
                                   {tag}
                                 </span>
@@ -194,7 +194,7 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-xl px-3 py-6 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  <div className="rounded-sm px-3 py-6 text-center text-xs font-medium text-text-2">
                     {t(locale, 'noMatches')}
                   </div>
                 )}
@@ -204,14 +204,14 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
         </div>
       </div>
 
-      <div className="min-h-[160px] overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="min-h-[160px] overflow-hidden rounded-sm border border-border bg-surface">
         {preview ? (
           <div className="max-h-[300px] overflow-y-auto p-4">
             <MarkdownPreview markdown={markdown} />
           </div>
         ) : (
           <textarea
-            className="h-40 w-full resize-none border-none bg-transparent p-4 font-mono text-xs leading-relaxed transition-all focus:outline-none dark:text-neutral-200"
+            className="h-40 w-full resize-none border-none bg-transparent p-4 font-mono text-xs leading-relaxed text-text transition-all focus:outline-none"
             placeholder={t(locale, 'notePlaceholder')}
             value={markdown}
             onChange={(event) => setMarkdown(event.target.value)}
@@ -220,7 +220,7 @@ export function NoteEditor({ problems, notes, locale, onSaved }: NoteEditorProps
       </div>
 
       <button
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-bold text-white transition-all hover:bg-amber-600 hover:shadow-lg active:scale-[0.98] dark:text-neutral-900"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-brand py-3 text-sm font-semibold text-white shadow-brand transition-transform duration-200 ease-spring hover:-translate-y-0.5 active:scale-[0.98]"
         onClick={save}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

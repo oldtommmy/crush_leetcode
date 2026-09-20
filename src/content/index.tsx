@@ -3,6 +3,7 @@ import { ensureInjectedRoot } from './injectRoot';
 import { observeAcceptedSubmission } from './acceptedObserver';
 import { installLeetCodeSubmissionBridge, listenForAcceptedBridge } from './pageBridge';
 import { detectCurrentProblem } from './leetcodeDetector';
+import { onLocationChange } from './navigationEvents';
 import { EvaluationModal } from './components/EvaluationModal';
 import { ProblemNoteButton } from './components/ProblemNoteButton';
 import { problemIdFor } from '../shared/review/scheduler';
@@ -57,13 +58,11 @@ function ContentApp() {
   }, []);
 
   useEffect(() => {
+    // C1: event-driven identity refresh. LeetCode is an SPA, so we react to
+    // history navigation (patched pushState/replaceState + popstate) instead of
+    // polling detectCurrentProblem() on a 1.5s timer that scanned the whole DOM.
     const refreshIdentity = () => setIdentity(detectCurrentProblem());
-    window.addEventListener('popstate', refreshIdentity);
-    const interval = window.setInterval(refreshIdentity, 1500);
-    return () => {
-      window.removeEventListener('popstate', refreshIdentity);
-      window.clearInterval(interval);
-    };
+    return onLocationChange(refreshIdentity);
   }, []);
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import { calculateRetrievability, getMasteryTier } from '../../shared/review/sel
 import { todayDateString } from '../../shared/date';
 import { MAX_DAILY_REVIEW_LIMIT, MIN_DAILY_REVIEW_LIMIT } from '../../shared/constants';
 import { localizeDailyCompletionText } from '../../shared/dailyCompletionMessages';
+import { problemUrlForLocale } from '../../shared/leetcode/url';
 
 interface DailyPlanProps {
   dueProblems: DueProblem[];
@@ -175,6 +176,18 @@ export function DailyPlan({
     chrome.tabs.create({ url: chrome.runtime.getURL('library.html') });
   };
 
+  const startFirstReview = () => {
+    const first = dueProblems[0];
+    if (first) {
+      chrome.runtime.sendMessage({
+        type: 'OPEN_PROBLEM',
+        payload: { url: problemUrlForLocale(first.titleSlug, locale) }
+      });
+    } else {
+      openLeetCode();
+    }
+  };
+
   const deferredLabel = locale === 'zh-CN'
     ? `还有 ${deferredCount} ${t(locale, 'queuedReviews')}`
     : `${deferredCount} ${t(locale, 'queuedReviews')}`;
@@ -190,21 +203,21 @@ export function DailyPlan({
 
   if (stats.totalProblems === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-neutral-200 py-12 px-6 text-center dark:border-neutral-800">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-amber-500 dark:bg-amber-500/10">
+      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border py-12 px-6 text-center">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand-soft text-brand-strong">
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
         </div>
-        <h3 className="text-lg font-black text-neutral-900 dark:text-neutral-100">{t(locale, 'tagline')}</h3>
-        <p className="mt-2 text-sm font-medium text-neutral-500 leading-relaxed">
+        <h3 className="text-lg font-semibold text-text">{t(locale, 'tagline')}</h3>
+        <p className="mt-2 text-sm font-medium text-text-2 leading-relaxed">
           {t(locale, 'proTipDesc')}
         </p>
         <div className="mt-8 flex w-full flex-col gap-3">
           <button
             onClick={openLeetCode}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 py-3.5 text-sm font-bold text-white transition-all hover:bg-black active:scale-95 dark:bg-white dark:text-neutral-900"
+            className="flex w-full items-center justify-center gap-2 rounded-sm bg-brand py-3.5 text-sm font-semibold text-white shadow-brand transition-transform duration-200 ease-spring hover:-translate-y-0.5 active:scale-95"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -215,7 +228,7 @@ export function DailyPlan({
           </button>
           <button
             onClick={openOptions}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-50 py-3.5 text-sm font-bold text-amber-600 transition-all hover:bg-amber-100 active:scale-95 dark:bg-amber-500/10 dark:text-amber-400"
+            className="flex w-full items-center justify-center gap-2 rounded-sm border border-border bg-surface-2 py-3.5 text-sm font-semibold text-text-2 transition-all duration-200 ease-standard hover:bg-surface active:scale-95"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -230,84 +243,97 @@ export function DailyPlan({
   }
 
   return (
-    <div className="space-y-6">
-      {/* 统计看板 */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-xl shadow-neutral-200/50 ring-1 ring-neutral-200 dark:bg-[#262626] dark:shadow-none dark:ring-neutral-800">
+    <div className="space-y-3.5">
+      {/* Hero：首屏只讲一件事 —— 今天做几题 */}
+      <div className="relative overflow-hidden rounded-lg border border-border-soft bg-surface p-5 shadow-sm">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-[150px] w-[150px] rounded-full" style={{ background: 'radial-gradient(circle,var(--brand-ring),transparent 70%)' }} />
         <div className="relative z-10">
-           <div className="flex items-center justify-between mb-6">
+          <div className="mb-4 flex items-baseline justify-between">
             <div>
-              <h2 className="text-3xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
-                {goalCompletedCount} <span className="text-base font-bold text-neutral-400">/ {totalToday}</span>
+              <h2 className="text-[40px] font-extrabold leading-none tracking-[-.03em] tabular-nums">
+                {goalCompletedCount}
+                <span className="text-[17px] font-bold text-text-3"> / {totalToday}</span>
               </h2>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">{t(locale, 'statsCompleted')}</p>
+              <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-text-2">{t(locale, 'statsCompleted')}</p>
             </div>
             <div className="text-right">
-              <h2 className={`text-3xl font-black tracking-tight ${remainingCount > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+              <div className={`text-2xl font-extrabold tabular-nums ${remainingCount > 0 ? 'text-brand-strong' : 'text-success'}`}>
                 {remainingCount}
-              </h2>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">{t(locale, 'statsRemaining')}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <button
-              type="button"
-              className="group rounded-xl bg-neutral-50 p-3.5 text-left transition hover:bg-neutral-100 active:scale-[0.98] dark:bg-neutral-800/50 dark:hover:bg-neutral-800"
-              onClick={openLibrary}
-              title={locale === 'zh-CN' ? '打开完整题库工作台' : 'Open problem library'}
-            >
-              <div className="text-lg font-black text-neutral-900 dark:text-neutral-100">{stats.totalProblems}</div>
-              <div className="flex items-center gap-1 text-[10px] font-bold uppercase text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300">
-                <span>{t(locale, 'problemLibrary')}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 17 17 7" />
-                  <path d="M7 7h10v10" />
-                </svg>
               </div>
-            </button>
-            <div className="rounded-xl bg-rose-50 p-3.5 dark:bg-rose-500/5">
-              <div className="text-lg font-black text-rose-500">{stats.overdueCount}</div>
-              <div className="text-[10px] font-bold uppercase text-rose-500 opacity-70">{t(locale, 'statsOverdue')}</div>
-            </div>
-            <div className="rounded-xl bg-indigo-50 p-3.5 dark:bg-indigo-500/5">
-              <div className="text-lg font-black text-indigo-500">{stats.reviewedLast7DaysCount}</div>
-              <div className="text-[10px] font-bold uppercase text-indigo-500 opacity-70">{t(locale, 'statsLast7Days')}</div>
+              <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[.1em] text-text-2">{t(locale, 'statsRemaining')}</p>
             </div>
           </div>
 
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+          <div className="h-[9px] w-full overflow-hidden rounded-full bg-surface-2">
             <div
-              className="h-full bg-amber-500 shadow-lg shadow-amber-500/30 transition-all duration-700 ease-out"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full transition-[width] duration-[1000ms] ease-standard"
+              style={{ width: `${progress}%`, background: 'linear-gradient(90deg,var(--brand),var(--brand-strong))', boxShadow: '0 0 12px var(--brand-ring)' }}
             />
           </div>
-        </div>
 
-        {/* Decorative background element */}
-        <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-amber-500/5 blur-3xl" />
+          {remainingCount > 0 && (
+            <button
+              onClick={startFirstReview}
+              className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-m py-3.5 text-sm font-extrabold text-white shadow-brand transition-transform duration-200 ease-spring hover:-translate-y-0.5 active:scale-[0.97]"
+              style={{ background: 'linear-gradient(135deg,var(--brand),var(--brand-strong))' }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              {locale === 'zh-CN' ? '开始复习第 1 题' : 'Start with problem 1'}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* View Tabs */}
-      <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-[#262626]">
+      {/* 指标行：中性卡 + 单一强调 */}
+      <div className="grid grid-cols-3 gap-2.5">
+        <button
+          type="button"
+          className="group rounded-m border border-border-soft bg-surface p-3.5 text-left shadow-sm transition-all duration-200 ease-spring hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]"
+          onClick={openLibrary}
+          title={locale === 'zh-CN' ? '打开完整题库工作台' : 'Open problem library'}
+        >
+          <div className="text-xl font-extrabold tabular-nums text-text">{stats.totalProblems}</div>
+          <div className="mt-1 flex items-center gap-1 text-[10.5px] font-bold text-text-2 group-hover:text-text">
+            <span>{t(locale, 'problemLibrary')}</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 17 17 7" />
+              <path d="M7 7h10v10" />
+            </svg>
+          </div>
+        </button>
+        <div className="rounded-m border border-border-soft bg-surface p-3.5 shadow-sm transition-all duration-200 ease-spring hover:-translate-y-0.5 hover:shadow-md">
+          <div className="text-xl font-extrabold tabular-nums text-danger">{stats.overdueCount}</div>
+          <div className="mt-1 text-[10.5px] font-bold text-text-2">{t(locale, 'statsOverdue')}</div>
+        </div>
+        <div className="rounded-m border border-border-soft bg-surface p-3.5 shadow-sm transition-all duration-200 ease-spring hover:-translate-y-0.5 hover:shadow-md">
+          <div className="text-xl font-extrabold tabular-nums text-text">{stats.reviewedLast7DaysCount}</div>
+          <div className="mt-1 text-[10.5px] font-bold text-text-2">{t(locale, 'statsLast7Days')}</div>
+        </div>
+      </div>
+
+      {/* 每日目标微调 */}
+      <div className="flex items-center justify-between rounded-m border border-border-soft bg-surface px-4 py-2.5 shadow-sm">
         <div>
-          <p className="text-xs font-black text-neutral-900 dark:text-neutral-100">{t(locale, 'dailyGoal')}</p>
-          <p className="mt-0.5 text-[10px] font-medium text-neutral-500">
+          <p className="text-xs font-extrabold text-text">{t(locale, 'dailyGoal')}</p>
+          <p className="mt-0.5 text-[10px] font-medium text-text-2">
             {deferredCount > 0 ? deferredLabel : t(locale, 'dailyPlan')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-sm font-black text-neutral-700 transition-all hover:bg-neutral-200 disabled:opacity-40 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-sm font-bold text-text-2 transition-all hover:bg-surface active:scale-90 disabled:opacity-40"
             disabled={dailyReviewLimit <= MIN_DAILY_REVIEW_LIMIT}
             onClick={() => onDailyReviewLimitChange(dailyReviewLimit - 1)}
           >
             -
           </button>
-          <span className="min-w-8 text-center text-lg font-black text-amber-500">{dailyReviewLimit}</span>
+          <span className="min-w-8 text-center text-lg font-extrabold tabular-nums text-brand-strong">{dailyReviewLimit}</span>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-sm font-black text-white transition-all hover:bg-black disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:scale-90 disabled:opacity-40"
             disabled={dailyReviewLimit >= MAX_DAILY_REVIEW_LIMIT}
             onClick={() => onDailyReviewLimitChange(dailyReviewLimit + 1)}
           >
@@ -316,26 +342,23 @@ export function DailyPlan({
         </div>
       </div>
 
-      <div className="flex p-1 bg-neutral-100 rounded-2xl dark:bg-neutral-800/50">
+      {/* 待复习 / 全部 —— 一级 tab + 滑动指示器 */}
+      <div className="relative flex rounded-m bg-surface-2 p-1">
+        <span
+          className="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-[calc(var(--r-m)-4px)] bg-surface shadow-sm transition-transform duration-[240ms] ease-spring"
+          style={{ transform: view === 'all' ? 'translateX(100%)' : 'translateX(0)' }}
+        />
         <button
           onClick={() => setView('daily')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-            view === 'daily' 
-              ? 'bg-white text-neutral-900 shadow-sm dark:bg-[#262626] dark:text-white' 
-              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400'
-          }`}
+          className={`relative z-[1] flex-1 py-2 text-xs font-extrabold transition-colors ${view === 'daily' ? 'text-text' : 'text-text-2 hover:text-text'}`}
         >
-          {t(locale, 'dailyPlan')}
+          {locale === 'zh-CN' ? '待复习' : 'Due'}
         </button>
         <button
           onClick={() => setView('all')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-            view === 'all' 
-              ? 'bg-white text-neutral-900 shadow-sm dark:bg-[#262626] dark:text-white' 
-              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400'
-          }`}
+          className={`relative z-[1] flex-1 py-2 text-xs font-extrabold transition-colors ${view === 'all' ? 'text-text' : 'text-text-2 hover:text-text'}`}
         >
-          {t(locale, 'problemLibrary')}
+          {locale === 'zh-CN' ? '全部题目' : 'All'}
         </button>
       </div>
 
@@ -353,9 +376,9 @@ export function DailyPlan({
               <>
                 {dueProblems.length > 0 && (
                   <div className="flex items-center gap-2 py-4">
-                    <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t(locale, 'statsCompleted')}</span>
-                    <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-text-3">{t(locale, 'statsCompleted')}</span>
+                    <div className="h-px flex-1 bg-border" />
                   </div>
                 )}
                 {completedTodayProblems.map((problem) => (
@@ -371,28 +394,28 @@ export function DailyPlan({
             )}
 
             {totalToday === 0 && (
-              <div className="flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-neutral-200 py-12 px-6 text-center dark:border-neutral-800">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10">
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border py-12 px-6 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-easy-soft text-easy-ink">
                   <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <polyline points="22 4 12 14.01 9 11.01" />
                   </svg>
                 </div>
-                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{t(locale, 'noTasks')}</p>
+                <p className="text-sm font-semibold text-text">{t(locale, 'noTasks')}</p>
               </div>
             )}
           </>
         ) : (
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
              {allProblems.length === 0 && (
-               <p className="text-center text-xs text-neutral-500 py-8">{t(locale, 'noProblemsRecorded')}</p>
+               <p className="text-center text-xs text-text-2 py-8">{t(locale, 'noProblemsRecorded')}</p>
              )}
              {allProblems.map((problem) => (
-               <ProblemCard 
-                 key={problem.id} 
-                 problem={problemToDue(problem)} 
-                 locale={locale} 
-                 onChanged={onChanged} 
+               <ProblemCard
+                 key={problem.id}
+                 problem={problemToDue(problem)}
+                 locale={locale}
+                 onChanged={onChanged}
                  viewMode="all"
                />
              ))}
@@ -401,19 +424,19 @@ export function DailyPlan({
       </div>
 
       {showCompleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-emerald-100 bg-white p-6 shadow-2xl dark:border-emerald-500/20 dark:bg-[#262626]">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6 clc-fade-in">
+          <div className="w-full max-w-sm rounded-lg border border-border-soft bg-elevated p-6 shadow-lg clc-modal-in">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-sm bg-easy-soft text-easy-ink">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             </div>
-            <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{t(locale, 'dailyCompleteTitle')}</p>
-            <h3 className="mt-2 text-xl font-black text-neutral-900 dark:text-neutral-100">{encouragement.title}</h3>
-            <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{encouragement.body}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-easy-ink">{t(locale, 'dailyCompleteTitle')}</p>
+            <h3 className="mt-2 text-xl font-semibold text-text">{encouragement.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-text-2">{encouragement.body}</p>
             <button
               type="button"
-              className="mt-6 w-full rounded-xl bg-neutral-900 py-3 text-sm font-bold text-white transition-all hover:bg-black active:scale-[0.99] dark:bg-white dark:text-neutral-900"
+              className="mt-6 w-full rounded-sm bg-brand py-3 text-sm font-semibold text-white shadow-brand transition-transform duration-200 ease-spring hover:-translate-y-0.5 active:scale-[0.99]"
               onClick={() => setShowCompleteModal(false)}
             >
               {t(locale, 'dailyCompleteClose')}

@@ -10,10 +10,10 @@ interface AnnouncementBannerProps {
 }
 
 const severityClassName: Record<ExtensionAnnouncement['severity'], string> = {
-  info: 'border-blue-500/20 bg-blue-50 text-blue-900 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-100',
-  success: 'border-emerald-500/20 bg-emerald-50 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100',
-  warning: 'border-amber-500/20 bg-amber-50 text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100',
-  critical: 'border-red-500/20 bg-red-50 text-red-900 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-100'
+  info: 'border-border-soft bg-brand-soft text-brand-strong',
+  success: 'border-border-soft bg-easy-soft text-easy-ink',
+  warning: 'border-border-soft bg-hard-soft text-hard-ink',
+  critical: 'border-border-soft bg-stuck-soft text-stuck-ink'
 };
 
 export function AnnouncementBanner({
@@ -28,9 +28,9 @@ export function AnnouncementBanner({
   const dismissLabel = locale === 'zh-CN' ? '不再提示' : 'Dismiss';
 
   return (
-    <section className={`rounded-xl border p-3 shadow-sm ${severityClassName[announcement.severity]}`}>
+    <section className={`rounded-sm border p-3 shadow-sm ${severityClassName[announcement.severity]}`}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/70 text-current shadow-sm dark:bg-white/10">
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xs bg-surface text-current shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 3v12" />
             <path d="m17 8-5-5-5 5" />
@@ -39,12 +39,12 @@ export function AnnouncementBanner({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h2 className={`${compact ? 'text-xs' : 'text-sm'} font-black leading-snug`}>
+            <h2 className={`${compact ? 'text-xs' : 'text-sm'} font-semibold leading-snug`}>
               {title}
             </h2>
             <button
               type="button"
-              className="rounded-md p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+              className="rounded-xs p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100"
               onClick={() => onDismiss(announcement.noticeId)}
               title={dismissLabel}
               aria-label={dismissLabel}
@@ -65,7 +65,7 @@ export function AnnouncementBanner({
               <button
                 key={`${announcement.noticeId}-${action.url}`}
                 type="button"
-                className="rounded-lg bg-neutral-950 px-3 py-1.5 text-[11px] font-black text-white transition hover:bg-black active:scale-[0.98] dark:bg-white dark:text-neutral-950"
+                className="rounded-sm bg-brand px-3 py-1.5 text-[11px] font-semibold text-white transition hover:-translate-y-0.5 active:scale-[0.98]"
                 onClick={() => onAction(action)}
               >
                 {localizeText(action.label, locale)}

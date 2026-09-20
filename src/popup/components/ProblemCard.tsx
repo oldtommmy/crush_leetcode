@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import type { DueProblem, Locale, ReviewRating, RuntimeRequest, RuntimeResponse } from '../../shared/types';
 import { RATING_LABELS } from '../../shared/review/ratingPolicy';
+import { RATING_EMOJI, RATING_ORDER, RATING_STYLES } from '../../shared/ui/rating';
 import { t } from '../../shared/i18n/messages';
 import { daysBetween, todayDateString } from '../../shared/date';
 import { displayProblemTags, displayProblemTitle } from '../../shared/leetcode/display';
 import { problemUrlForLocale } from '../../shared/leetcode/url';
+import { calculateNextReview } from '../../shared/review/scheduler';
+import { DEFAULT_REVIEW_POLICY } from '../../shared/constants';
 
 interface ProblemCardProps {
   problem: DueProblem;
@@ -14,14 +17,7 @@ interface ProblemCardProps {
   viewMode?: 'daily' | 'all';
 }
 
-const ratings: ReviewRating[] = ['too_easy', 'normal', 'hard', 'no_clue'];
-
-const ratingStyles: Record<ReviewRating, string> = {
-  too_easy: 'bg-emerald-500 hover:bg-emerald-600',
-  normal: 'bg-blue-500 hover:bg-blue-600',
-  hard: 'bg-amber-500 hover:bg-amber-600',
-  no_clue: 'bg-red-500 hover:bg-red-600'
-};
+const ratings: ReviewRating[] = RATING_ORDER;
 
 function problemToIdentity(problem: DueProblem) {
   return {
@@ -98,25 +94,26 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
   };
 
   const difficultyMap = {
-    Easy: { label: t(locale, 'difficultyEasy'), color: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20' },
-    Medium: { label: t(locale, 'difficultyMedium'), color: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20' },
-    Hard: { label: t(locale, 'difficultyHard'), color: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-500/10 border-red-100 dark:border-red-500/20' },
-    简单: { label: t(locale, 'difficultyEasy'), color: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20' },
-    中等: { label: t(locale, 'difficultyMedium'), color: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20' },
-    困难: { label: t(locale, 'difficultyHard'), color: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-500/10 border-red-100 dark:border-red-500/20' }
+    Easy: { label: t(locale, 'difficultyEasy'), color: 'text-easy-ink bg-easy-soft border-transparent' },
+    Medium: { label: t(locale, 'difficultyMedium'), color: 'text-hard-ink bg-hard-soft border-transparent' },
+    Hard: { label: t(locale, 'difficultyHard'), color: 'text-stuck-ink bg-stuck-soft border-transparent' },
+    简单: { label: t(locale, 'difficultyEasy'), color: 'text-easy-ink bg-easy-soft border-transparent' },
+    中等: { label: t(locale, 'difficultyMedium'), color: 'text-hard-ink bg-hard-soft border-transparent' },
+    困难: { label: t(locale, 'difficultyHard'), color: 'text-stuck-ink bg-stuck-soft border-transparent' }
   };
 
   const masteryTierMap = {
-    new: { label: t(locale, 'masteryNew'), color: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300' },
-    familiar: { label: t(locale, 'masteryFamiliar'), color: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300' },
-    proficient: { label: t(locale, 'masteryProficient'), color: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300' },
-    mastered: { label: t(locale, 'masteryMastered'), color: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300' }
+    new: { label: t(locale, 'masteryNew'), color: 'border-transparent bg-surface-2 text-text-2' },
+    familiar: { label: t(locale, 'masteryFamiliar'), color: 'border-transparent bg-good-soft text-good-ink' },
+    proficient: { label: t(locale, 'masteryProficient'), color: 'border-transparent bg-hard-soft text-hard-ink' },
+    mastered: { label: t(locale, 'masteryMastered'), color: 'border-transparent bg-easy-soft text-easy-ink' }
   };
 
-  const diff = difficultyMap[problem.difficulty as keyof typeof difficultyMap] || { label: problem.difficulty, color: 'text-neutral-500 bg-neutral-50 dark:bg-neutral-800' };
+  const diff = difficultyMap[problem.difficulty as keyof typeof difficultyMap] || { label: problem.difficulty, color: 'text-text-2 bg-surface-2 border-transparent' };
   const mastery = masteryTierMap[problem.masteryTier];
   const strengthPercent = Math.round(problem.retrievability * 100);
-  const isDanger = strengthPercent < 90;
+  const strengthColor =
+    strengthPercent >= 85 ? 'text-easy' : strengthPercent >= 65 ? 'text-good' : strengthPercent >= 45 ? 'text-hard' : 'text-stuck';
 
   const daysUntilReview = problem.nextReviewAt ? daysBetween(todayDateString(), problem.nextReviewAt) : null;
   const nextReviewText = (() => {
@@ -133,38 +130,38 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
   })();
 
   return (
-    <article className={`group relative overflow-hidden rounded-2xl border transition-all ${
+    <article className={`group relative overflow-hidden rounded-m border transition-all duration-200 ease-standard ${
       isCompleted
-        ? 'border-neutral-300 bg-neutral-100 shadow-sm ring-1 ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-900/70 dark:ring-neutral-800'
-        : 'border-neutral-200 bg-white hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/5 dark:border-neutral-800 dark:bg-[#262626]'
+        ? 'border-border-soft bg-surface-2 shadow-none'
+        : 'border-border-soft bg-surface shadow-sm hover:-translate-y-0.5 hover:border-[var(--brand-ring)] hover:shadow-md'
     } p-4`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+          <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
             {!isCompleted && (
-              <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-tight ${diff.color}`}>
+              <span className={`rounded-[7px] px-2 py-[3px] text-[10px] font-extrabold tracking-[.02em] ${diff.color}`}>
                 {diff.label}
               </span>
             )}
             {!isCompleted && (
-              <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight shadow-sm ${mastery.color}`}>
+              <span className={`rounded-[7px] px-2 py-[3px] text-[10px] font-extrabold tracking-[.02em] ${mastery.color}`}>
                 {mastery.label}
               </span>
             )}
             {problem.daysOverdue > 0 && !isCompleted && (
-              <span className="flex items-center gap-1 rounded-md bg-violet-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-tight text-white dark:bg-violet-500">
+              <span className="flex items-center gap-1 rounded-[7px] bg-stuck-soft px-2 py-[3px] text-[10px] font-extrabold tracking-[.02em] text-stuck-ink">
                 {problem.daysOverdue}{t(locale, 'daysDelay')}
               </span>
             )}
             {isCompleted && (
-              <span className="rounded-md border border-neutral-300 bg-white px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-tight text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400">
+              <span className="rounded-[7px] bg-surface-2 px-2 py-[3px] text-[10px] font-extrabold uppercase tracking-[.02em] text-text-2">
                 DONE
               </span>
             )}
             {displayTags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {displayTags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="rounded-md bg-neutral-100 px-1.5 py-0.5 text-[9px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                  <span key={tag} className="rounded-[7px] bg-surface-2 px-2 py-[3px] text-[10px] font-extrabold text-text-2">
                     {tag}
                   </span>
                 ))}
@@ -173,8 +170,8 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
           </div>
 
           <h3
-            className={`cursor-pointer text-sm font-bold leading-tight transition-colors hover:text-amber-500 dark:hover:text-amber-500 truncate ${
-              isCompleted ? 'text-neutral-500 line-through decoration-neutral-400 decoration-2 dark:text-neutral-400' : 'text-neutral-900 dark:text-neutral-100'
+            className={`cursor-pointer text-[14.5px] font-extrabold leading-tight tracking-[-.01em] transition-colors hover:text-brand-strong truncate ${
+              isCompleted ? 'text-text-3 line-through decoration-text-3 decoration-2' : 'text-text'
             }`}
             onClick={openProblem}
             title={displayTitle}
@@ -183,29 +180,29 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
           </h3>
 
           {!isCompleted && (
-            <div className="mt-3 flex flex-col gap-2">
-               <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-neutral-400">
+            <div className="mt-3 flex flex-col gap-1.5">
+               <div className="flex items-center justify-between text-[10.5px] font-extrabold uppercase tracking-[.06em] text-text-3">
                   <span>{t(locale, 'memoryStrength')}</span>
-                  <span className={isDanger ? 'text-red-500' : 'text-emerald-500'}>{strengthPercent}%</span>
+                  <span className={strengthColor}>{strengthPercent}%</span>
                </div>
-               <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-                  <div 
-                    className={`h-full transition-all duration-500 ${isDanger ? 'bg-red-500' : 'bg-emerald-500'}`}
+               <div className="h-[7px] w-full overflow-hidden rounded-full bg-surface-2">
+                  <div
+                    className="h-full rounded-full bg-strength transition-all duration-700 ease-standard"
                     style={{ width: `${strengthPercent}%` }}
                   />
                </div>
             </div>
           )}
 
-          <div className="mt-3 flex items-center gap-3 text-[10px] text-neutral-500 dark:text-neutral-400">
+          <div className="mt-3 flex items-center gap-4 text-[11px] text-text-2">
             <div className="flex items-center gap-1">
               <span className="font-medium opacity-70">{t(locale, 'labelReviews')}:</span>
-              <span className="font-bold text-neutral-700 dark:text-neutral-300">{problem.reviewCount}</span>
+              <span className="font-extrabold text-text tabular-nums">{problem.reviewCount}</span>
             </div>
             {!isCompleted && (
               <div className="flex items-center gap-1">
                 <span className="font-medium opacity-70">{t(locale, 'labelInterval')}:</span>
-                <span className="font-bold text-neutral-700 dark:text-neutral-300">{problem.stability.toFixed(1)}d</span>
+                <span className="font-extrabold text-text tabular-nums">{problem.stability.toFixed(1)}d</span>
               </div>
             )}
           </div>
@@ -213,11 +210,7 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
 
         <div className="flex flex-col gap-2">
           <button
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all ${
-              isCompleted
-                ? 'border-neutral-200 bg-transparent text-neutral-400 hover:border-amber-500 hover:text-amber-500 dark:border-neutral-700 dark:text-neutral-500'
-                : 'border-neutral-100 bg-neutral-50 text-neutral-400 hover:border-amber-500 hover:bg-amber-500 hover:text-white dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500'
-            }`}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-border bg-surface-2 text-text-2 transition-all duration-200 ease-standard hover:border-brand hover:text-brand-strong active:scale-95"
             onClick={openProblem}
             title={t(locale, 'open')}
           >
@@ -227,10 +220,10 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
           </button>
-          
+
           {isCompleted && (
             <button
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-100 bg-neutral-50 text-neutral-400 hover:border-amber-500 hover:text-amber-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500 transition-all active:scale-95"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-border bg-surface-2 text-text-2 transition-all duration-200 ease-standard hover:border-brand hover:text-brand-strong active:scale-95"
               onClick={resetToToday}
               title={t(locale, 'resetToToday')}
             >
@@ -243,7 +236,7 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
 
           {viewMode === 'all' && (
             <button
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-500 transition-all hover:border-rose-400 hover:bg-rose-500 hover:text-white active:scale-95 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-danger/40 bg-stuck-soft text-danger transition-all duration-200 ease-standard hover:bg-danger hover:text-white active:scale-95"
               onClick={() => setShowRemoveConfirm(true)}
               title={t(locale, 'removeProblem')}
             >
@@ -260,56 +253,68 @@ export function ProblemCard({ problem, locale, onChanged, isCompleted = false, v
       </div>
 
       {isCompleted || viewMode === 'all' ? (
-        <div className="mt-3 flex items-center justify-between rounded-lg bg-neutral-100/50 px-3 py-2 dark:bg-neutral-800/50">
-          <span className="text-[10px] font-bold text-neutral-400">
+        <div className="mt-3 flex items-center justify-between rounded-sm bg-surface-2 px-3 py-2">
+          <span className="text-[10px] font-medium text-text-2">
             {isCompleted ? nextReviewText : t(locale, 'nextReview') + ': ' + nextReviewText}
           </span>
           {viewMode === 'all' && (
-             <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-tight ${diff.color}`}>
+             <span className={`rounded-xs px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-tight ${diff.color}`}>
               {diff.label}
             </span>
           )}
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-4 gap-1.5">
-          {ratings.map((rating) => (
-            <button
-              key={rating}
-              className={`flex flex-col items-center justify-center rounded-lg py-1.5 text-white transition-all active:scale-95 ${ratingStyles[rating]}`}
-              onClick={() => void rate(rating)}
-              title={RATING_LABELS[rating][language]}
-            >
-              <span className="text-[9px] font-bold uppercase tracking-tighter">
-                {compactRatingLabels[rating][language]}
-              </span>
-            </button>
-          ))}
+        <div className="mt-3.5 grid grid-cols-4 gap-2">
+          {ratings.map((rating) => {
+            const style = RATING_STYLES[rating];
+            const previewDays = (() => {
+              try {
+                return calculateNextReview(problem, rating, DEFAULT_REVIEW_POLICY, new Date()).intervalDays;
+              } catch {
+                return null;
+              }
+            })();
+            return (
+              <button
+                key={rating}
+                className={`flex flex-col items-center justify-center gap-0.5 rounded-sm border-[1.5px] border-transparent px-1 py-2.5 text-[11.5px] font-extrabold ${style.soft} ${style.ink} ${style.hoverBorder} ${style.hoverShadow} transition-all duration-200 ease-spring hover:-translate-y-0.5 active:scale-95`}
+                onClick={() => void rate(rating)}
+                title={RATING_LABELS[rating][language]}
+              >
+                <span className="text-sm leading-none">{RATING_EMOJI[rating]}</span>
+                <span className="leading-none">{compactRatingLabels[rating][language]}</span>
+                {previewDays !== null && (
+                  <span className="text-[9px] font-bold leading-none opacity-70">+{previewDays}d</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
       {showRemoveConfirm && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/95 p-4 backdrop-blur-sm dark:bg-neutral-950/95">
-          <div className="w-full rounded-xl border border-rose-100 bg-white p-4 shadow-xl dark:border-rose-500/20 dark:bg-[#262626]">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-400">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full rounded-m border border-border-soft bg-elevated p-4 shadow-lg">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm bg-stuck-soft text-danger">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 6h18" />
                 <path d="M8 6V4h8v2" />
                 <path d="M19 6l-1 14H6L5 6" />
               </svg>
             </div>
-            <h4 className="text-sm font-black text-neutral-900 dark:text-neutral-100">{t(locale, 'removeProblem')}</h4>
-            <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{t(locale, 'removeConfirm')}</p>
+            <h4 className="text-sm font-semibold text-text">{t(locale, 'removeProblem')}</h4>
+            <p className="mt-1 text-xs leading-5 text-text-2">{t(locale, 'removeConfirm')}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
                 type="button"
-                className="rounded-lg border border-neutral-200 bg-white py-2 text-xs font-bold text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
+                className="rounded-sm border border-border bg-surface py-2 text-xs font-medium text-text-2 transition-colors hover:bg-surface-2"
                 onClick={() => setShowRemoveConfirm(false)}
               >
                 {t(locale, 'cancel')}
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-rose-500 py-2 text-xs font-bold text-white hover:bg-rose-600"
+                className="rounded-sm bg-danger py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
                 onClick={() => void removeProblem()}
               >
                 {t(locale, 'removeProblem')}

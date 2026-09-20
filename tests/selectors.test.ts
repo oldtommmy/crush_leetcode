@@ -47,19 +47,26 @@ describe('review selectors', () => {
   });
 
   it('treats problems scheduled later today as due for the daily plan', () => {
+    // Anchor both the scheduled timestamps and "now" to local wall-clock time so
+    // this stays deterministic across timezones (B1: due dates compare on the
+    // local calendar day, not the UTC day).
+    const now = new Date(2026, 3, 21, 8, 0, 0);
+    const laterTodayIso = new Date(2026, 3, 21, 23, 30, 0).toISOString();
+    const tomorrowIso = new Date(2026, 3, 22, 0, 1, 0).toISOString();
+
     const laterToday = createProblem({
       id: 'leetcode:two-sum',
       titleSlug: 'two-sum',
       title: 'Two Sum',
       url: 'https://leetcode.com/problems/two-sum/',
-      nextReviewAt: '2026-04-21T23:30:00.000Z'
+      nextReviewAt: laterTodayIso
     });
     const tomorrow = createProblem({
       id: 'leetcode:add-two-numbers',
       titleSlug: 'add-two-numbers',
       title: 'Add Two Numbers',
       url: 'https://leetcode.com/problems/add-two-numbers/',
-      nextReviewAt: '2026-04-22T00:01:00.000Z'
+      nextReviewAt: tomorrowIso
     });
 
     const state = createState({
@@ -69,7 +76,7 @@ describe('review selectors', () => {
       }
     });
 
-    expect(selectDueProblems(state, new Date('2026-04-21T08:00:00.000Z')).map((problem) => problem.id)).toEqual([
+    expect(selectDueProblems(state, now).map((problem) => problem.id)).toEqual([
       laterToday.id
     ]);
   });

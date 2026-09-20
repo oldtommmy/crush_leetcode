@@ -319,6 +319,9 @@ export interface ReviewCoachOutput {
   encouragement: string;
 }
 
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type PetSize = 'small' | 'medium' | 'large';
+
 export interface UserSettings {
   autoShowAcceptedModal: boolean;
   locale: Locale;
@@ -326,7 +329,8 @@ export interface UserSettings {
   reminders: ReminderSettings;
   emailWebhook: EmailWebhookSettings;
   cloudSync: SupabaseSyncSettings;
-  themeMode: 'system' | 'light' | 'dark';
+  themeMode: ThemeMode;
+  petSize: PetSize;
   dailyReviewLimit: number;
 }
 
@@ -343,6 +347,14 @@ export interface ExtensionStorageState {
     lastNotificationAt?: string;
     storageBackend: 'local';
     migratedAt?: string;
+    /**
+     * Monotonic write counter for optimistic concurrency. popup / options /
+     * library / service worker each run in isolated JS contexts with their own
+     * write queue, so a shared in-memory queue cannot serialize them. Each
+     * committed write bumps this value; updateState re-reads and retries when a
+     * concurrent write changed it, so no context silently clobbers another.
+     */
+    revision?: number;
     reminderDelivery?: ReminderDeliveryState;
     dismissedAnnouncementIds?: string[];
   };
