@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_NOTE_MARKDOWN_BYTES, saveNote } from '../src/shared/storage/chromeStorage';
+import { getState, MAX_NOTE_MARKDOWN_BYTES, saveNote } from '../src/shared/storage/chromeStorage';
+import { STORAGE_KEY } from '../src/shared/constants';
 
 describe('chromeStorage', () => {
   const get = vi.fn();
@@ -24,5 +25,22 @@ describe('chromeStorage', () => {
 
     expect(get).not.toHaveBeenCalled();
     expect(set).not.toHaveBeenCalled();
+  });
+
+  it('defaults missing and invalid pet sizes to medium during migration', async () => {
+    get.mockResolvedValue({
+      [STORAGE_KEY]: {
+        settings: { petSize: 'giant' }
+      }
+    });
+
+    expect((await getState()).settings.petSize).toBe('medium');
+
+    get.mockResolvedValue({
+      [STORAGE_KEY]: {
+        settings: {}
+      }
+    });
+    expect((await getState()).settings.petSize).toBe('medium');
   });
 });

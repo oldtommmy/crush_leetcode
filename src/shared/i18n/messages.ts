@@ -65,8 +65,8 @@ type MessageKey =
   | 'daysLater'
   | 'nextReview'
   | 'maybeLater'
-  | 'dragButton'
   | 'rate'
+  | 'petHint'
   | 'edit'
   | 'view'
   | 'floatingNotePlaceholder'
@@ -191,8 +191,8 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     daysLater: 'days later',
     nextReview: 'Next review',
     maybeLater: 'Maybe later',
-    dragButton: 'Drag buttons',
     rate: 'Rate',
+    petHint: 'Click to rate · right-click for notes',
     edit: 'Edit',
     view: 'View',
     floatingNotePlaceholder: 'Write solution ideas, pitfalls, complexity...',
@@ -316,8 +316,8 @@ const messages: Record<Locale, Record<MessageKey, string>> = {
     daysLater: '天后',
     nextReview: '下次复习',
     maybeLater: '稍后再说',
-    dragButton: '拖动按钮',
     rate: '评分',
+    petHint: '点击评分 · 右键笔记',
     edit: '编辑',
     view: '查看',
     floatingNotePlaceholder: '写下题解、坑点、复杂度...',

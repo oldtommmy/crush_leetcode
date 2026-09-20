@@ -1,227 +1,149 @@
 <div align="center">
-  <img src="./public/icons/icon.png" alt="Crush LeetCode Logo" width="116" height="116" />
+  <img src="./public/icons/icon.png" alt="Crush LeetCode Logo" width="104" height="104" />
 
   <h1>Crush LeetCode</h1>
 
-  <p><strong>把刷过的 LeetCode 题，真正变成会做的题。</strong></p>
-  <p><strong>Turn solved LeetCode problems into long-term memory.</strong></p>
+  <p><strong>把刷过的 LeetCode 题，变成真正会做的题。</strong></p>
+  <p>一个本地优先的 LeetCode 间隔复习 Chrome 扩展。</p>
 
   <p>
-    <a href="https://github.com/oldtommmy/crush_leetcode"><img src="https://img.shields.io/badge/GitHub-crush__leetcode-181717?style=for-the-badge&logo=github" alt="GitHub Repo" /></a>
-    <a href="https://github.com/oldtommmy/crush_leetcode/releases"><img src="https://img.shields.io/badge/version-0.0.4%20beta.1-ffb020?style=for-the-badge" alt="Version 0.0.4 beta.1" /></a>
-    <img src="https://img.shields.io/badge/Chrome-MV3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome MV3" />
-    <img src="https://img.shields.io/badge/FSRS-ts--fsrs%205.3-blueviolet?style=for-the-badge" alt="ts-fsrs 5.3" />
-    <img src="https://img.shields.io/badge/License-CC%20BY--NC%204.0-red?style=for-the-badge" alt="License CC BY-NC 4.0" />
+    <a href="https://github.com/oldtommmy/crush_leetcode"><img src="https://img.shields.io/badge/GitHub-crush__leetcode-181717?style=for-the-badge&logo=github" alt="GitHub repository" /></a>
+    <a href="https://github.com/oldtommmy/crush_leetcode/releases"><img src="https://img.shields.io/badge/version-0.0.4%20beta.1-ff9f0a?style=for-the-badge" alt="Version 0.0.4 beta.1" /></a>
+    <img src="https://img.shields.io/badge/Chrome-MV3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
+    <img src="https://img.shields.io/badge/FSRS-ts--fsrs%205.3-6e44ff?style=for-the-badge" alt="ts-fsrs 5.3" />
+    <img src="https://img.shields.io/badge/License-CC%20BY--NC%204.0-d9485f?style=for-the-badge" alt="CC BY-NC 4.0" />
   </p>
 
   <p>
-    <a href="#中文说明">中文说明</a> ·
-    <a href="#english">English</a> ·
-    <a href="#development">Development</a>
+    <a href="#快速开始">快速开始</a> ·
+    <a href="#界面一览">界面一览</a> ·
+    <a href="#数据与隐私">数据与隐私</a> ·
+    <a href="#english-at-a-glance">English</a> ·
+    <a href="#开发">开发</a>
   </p>
 </div>
 
 ---
 
-## 中文说明
+## 为什么是 Crush LeetCode
+
+刷题的难点不只是 AC，而是让做过的题在真正需要时还能想起来。
+
+Crush LeetCode 把复习直接放回 LeetCode 工作流：提交通过后给出掌握反馈，依据反馈安排下一次复习；当天该复习什么、哪些题逾期、哪些公司高频还没覆盖，打开扩展就能看到。
+
+<table>
+  <tr>
+    <td width="33%" align="center"><strong>1. 提交通过</strong><br/>自动识别 LeetCode 与 LeetCode CN 的 Accepted 提交。</td>
+    <td width="33%" align="center"><strong>2. 给出反馈</strong><br/>按“轻松 / 还行 / 吃力 / 没思路”记录真实掌握程度。</td>
+    <td width="33%" align="center"><strong>3. 按计划复习</strong><br/>用 FSRS 节奏安排下一次回顾，而不是凭感觉猜。</td>
+  </tr>
+</table>
+
+## 界面一览
+
+<table>
+  <tr>
+    <td align="center">
+      <strong>Accepted 后即时反馈</strong><br/>
+      <sub>一次选择，决定更合适的下次复习时间。</sub><br/><br/>
+      <img src="./public/shots/accepted-rating.png" alt="Accepted 后的掌握度评分弹窗" width="330" />
+    </td>
+    <td align="center">
+      <strong>今日复习计划</strong><br/>
+      <sub>进度、逾期、待复习题与笔记在一个紧凑面板中。</sub><br/><br/>
+      <img src="./public/shots/daily-plan.png" alt="Crush LeetCode 今日复习 Popup" width="330" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <strong>完整题库与笔记</strong><br/>
+      <sub>按难度、标签、掌握度筛选，并把思路沉淀在题目旁。</sub><br/><br/>
+      <img src="./public/shots/library-notes.png" alt="完整题库与 Markdown 笔记" width="520" />
+    </td>
+    <td align="center">
+      <strong>大厂高频题</strong><br/>
+      <sub>按公司浏览高频题，快速补齐本地题库覆盖。</sub><br/><br/>
+      <img src="./public/shots/top-q.png" alt="按公司浏览大厂高频题" width="330" />
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <strong>可控的设置</strong><br/>
+      <sub>主题、语言、提醒、备份和悬浮 Logo 大小都可按习惯调整。</sub><br/><br/>
+      <img src="./public/shots/settings.png" alt="Crush LeetCode 设置页与悬浮 Logo 大小选项" width="760" />
+    </td>
+  </tr>
+</table>
+
+## 核心能力
+
+### 自动记录，按掌握程度复习
+
+- **AC 后自动入库**：支持 `leetcode.com` 和 `leetcode.cn`，提交通过即可进入复习流程。
+- **FSRS 间隔复习**：根据每次反馈动态调整下一次复习日期，不使用固定、僵硬的间隔。
+- **今日计划**：在 Popup 中查看待复习、已完成、逾期数量与最近 7 天表现。
+- **复习评分可回溯**：每题保留复习次数、记忆强度与计划间隔，帮助判断真正薄弱的题。
+
+### 题库、高频题与 Markdown 笔记
+
+- **完整本地题库**：按难度、标签、是否有笔记和掌握度筛选；可查看题目详情与复习状态。
+- **大厂高频题**：按公司查看高频题，并与本地题库匹配，区分已做与待补题目。
+- **每题独立 Markdown 笔记**：从题目页、Popup 或题库记录思路、坑点与复杂度，并支持预览与导出。
+- **悬浮 Logo 快捷入口**：题目页 Logo 支持拖拽定位；左键进入评分，右键打开笔记，并提供小号、默认、大号三档大小。
+
+### 提醒、备份和自主控制
+
+- **桌面提醒与本地周报**：按设定时间提醒复习，也可导出本地 HTML 周报。
+- **导入导出**：支持 JSON 备份、导入前预览与 Markdown 笔记导出，换设备也能带走积累。
+- **可选云同步**：仅在你主动开启并设置恢复码后使用；日常使用不依赖云端。
+- **中英双语与主题**：支持中文 / English，以及浅色、深色与跟随系统主题。
+
+## 快速开始
+
+### 安装
+
+1. 从 [Releases](https://github.com/oldtommmy/crush_leetcode/releases) 下载最新 ZIP 并解压。
+2. 在 Chrome 打开 `chrome://extensions/`。
+3. 开启右上角的 **开发者模式**。
+4. 选择 **加载已解压的扩展程序**，并选择解压后的目录。
+
+### 第一次使用
+
+1. 正常完成一道 LeetCode 题并提交。
+2. Accepted 后选择当前真实感受：`轻松`、`还行`、`吃力` 或 `没思路`。
+3. 打开扩展 Popup，开始当天的复习计划；需要时为题目补充 Markdown 笔记。
+4. 在设置页配置提醒、主题、备份和悬浮 Logo 大小。
+
+## 数据与隐私
+
+Crush LeetCode 默认以 **浏览器本地存储** 为中心。你的题目记录、复习日志和笔记不会因为浏览大厂高频题而上传。
+
+<details>
+  <summary><strong>查看数据处理说明</strong></summary>
+  <br/>
+
+  - **本地题库匹配**：大厂高频功能只用浏览器本地题库进行匹配，不上传题目记录、笔记、代码或复习日志。
+  - **备份可带走**：可随时导出 JSON 备份与 Markdown 笔记；导出会排除云同步恢复码、邮箱和访问码等敏感字段。
+  - **云同步是可选项**：只有主动启用、设置恢复码并执行同步后，才会使用云端快照能力。
+  - **恢复码请自行保管**：恢复数据需要使用同一个恢复码；建议使用足够长且不常见的组合。
+</details>
 
-### 项目介绍
+## English at a glance
 
-**Crush LeetCode** 是一款 Chrome 扩展，帮助你把 LeetCode 刷题变成一个更稳定的复习流程。
+**Crush LeetCode** is a local-first Chrome extension that turns solved LeetCode problems into a spaced-repetition review workflow.
 
-它会在你提交通过后记录题目，根据你的掌握程度安排下一次复习，并提供题目笔记、今日复习列表、完整题库、桌面提醒、周报和可选云同步能力。你不用再额外维护表格，也不用靠感觉猜今天该复习什么。
+- Capture accepted submissions from LeetCode and LeetCode CN, then rate how well you knew the solution.
+- Schedule follow-up reviews with FSRS, and see due, completed, and overdue work in a compact daily plan.
+- Keep per-problem Markdown notes, browse a searchable library, and compare it with company hot-question lists.
+- Own your data through local storage, JSON backup, note export, and optional opt-in cloud snapshots.
 
-### v0.0.4 beta 更新重点
+### Install
 
-这一版重点围绕两件事：**做题后记录更稳**，以及**把大厂高频题接进你的本地题库**。
+1. Download and unzip the latest package from [Releases](https://github.com/oldtommmy/crush_leetcode/releases).
+2. Open `chrome://extensions/`, enable **Developer mode**, then choose **Load unpacked**.
+3. Select the extracted extension directory and start solving.
 
-- 🧯 **v0.0.4 beta.1 热修已发布**：修复 v0.0.4 beta 中可能出现的题目页脚本异常，恢复 AC 后评分弹窗和自动入库。
-- ✅ **LeetCode CN 提交识别更稳**：更准确地区分运行示例和正式提交，减少旧题弹窗、误判和漏记录。
-- 🔥 **大厂高频题入口上线**：Popup 增加“复习 / 高频”切换，完整题库页也可以直接切到“大厂高频”。
-- 🧭 **高频覆盖一眼看清**：按公司查看热门题，并结合你的本地题库展示哪些已做、哪些待补。
-- 🛡️ **依然优先保护本地数据**：高频题只和浏览器里的本地题库做匹配，不上传你的题库、笔记、代码或复习记录。
-
-### 核心功能
-
-**🧠 自动记录与智能复习**
-
-- ✅ **AC 后自动入库**：支持 `leetcode.com` 和 `leetcode.cn`，提交通过后自动弹出评分面板。
-- 📆 **今日复习清单**：在 Popup 里查看今天该复习、已经完成、以及逾期未复习的题。
-- 🪄 **更懂你的复习间隔**：根据每次掌握程度动态安排下一次复习，不再靠感觉猜。
-
-**🔥 大厂高频与题库覆盖**
-
-- 🏢 **按公司查看高频题**：快速浏览美团、字节、腾讯、阿里等公司高频题。
-- 🎯 **只匹配你的本地题库**：展示哪些已经做过、哪些还没覆盖，不上传刷题历史。
-- 🗂️ **完整题库 / 大厂高频一键切换**：在独立题库页查看筛选、掌握度、详情、笔记和高频覆盖。
-
-**✍️ 笔记、提醒与数据管理**
-
-- 📝 **每题独立 Markdown 笔记**：支持编辑、预览和本地导出，把思路沉淀在题目旁边。
-- 🔔 **桌面提醒与复习周报**：到点提醒你复习，也可以配置邮箱接收一周进度。
-- 📦 **导入导出更安心**：支持 JSON 备份和导入前预览，换设备或重装浏览器也不慌。
-- ☁️ **可选云同步**：你主动开启后，才能用恢复码同步到云端快照。
-- 🌗 **双语与主题**：支持中文 / English，以及浅色、深色、跟随系统主题。
-
-### 为什么适合刷题复习
-
-- **贴近 LeetCode 工作流**：直接运行在题目页、Popup 和设置页中，不需要切换到额外工具。
-- **复习节奏更具体**：不是简单按固定天数提醒，而是根据每次掌握反馈调整间隔。
-- **题库和笔记连在一起**：题目、评分、复习日志、掌握进度和 Markdown 笔记围绕同一道题沉淀。
-- **数据可带走**：JSON 备份、Markdown 笔记导出和可选云同步，降低换设备或重装浏览器的成本。
-- **持续更新更轻盈**：公告、版本提示和每日完成文案可以远程更新，重要信息不会错过。
-
-### 截图
-
-<div align="center">
-
-  <p><strong>评分弹窗</strong></p>
-  <img src="./public/shots/rating-modal.png" alt="评分弹窗" width="720" />
-
-  <p><strong>掌握度看板</strong></p>
-  <img src="./public/shots/dashboard.png" alt="掌握度看板" width="720" />
-
-  <p><strong>Markdown 笔记</strong></p>
-  <img src="./public/shots/notes.png" alt="Markdown 笔记" width="720" />
-
-  <p><strong>设置页面</strong></p>
-  <img src="./public/shots/settings.png" alt="设置页面" width="720" />
-
-</div>
-
-### 安装使用
-
-1. 打开 [Releases](https://github.com/oldtommmy/crush_leetcode/releases)，下载最新的 zip 包并解压。
-2. 在 Chrome 地址栏打开 `chrome://extensions/`。
-3. 开启右上角 **Developer mode / 开发者模式**。
-4. 点击 **Load unpacked / 加载已解压的扩展程序**，选择解压后的目录。
-
-### 使用流程
-
-1. 在 LeetCode 正常做题并提交。
-2. Accepted 后选择你的掌握程度：`完全没思路`、`困难`、`一般`、`轻松`。
-3. 打开扩展 Popup 查看今日复习计划、高频推荐和官方公告。
-4. 在题目页、Popup 或完整题库页记录 Markdown 笔记。
-5. 在设置页配置提醒、周报邮箱、导入导出、笔记导出和可选云同步。
-
-### 云同步说明
-
-云同步是可选功能。开启后，扩展会在题目记录、笔记、复习状态等数据变化时尝试自动上传云端快照；你也可以在设置页手动上传或恢复。
-
-- **恢复码由用户自己设置**：建议使用邮箱加一段私有后缀，例如 `name@example.com-crush-2026-private`。
-- **恢复码需要记住**：恢复数据时必须输入同一个恢复码，插件和服务端不会保存明文恢复码。
-- **避免过短或过常见**：恢复码太简单会增加碰撞和误恢复风险。
-- **同步的是快照**：当前版本以整体数据快照为主，后续会继续优化冲突合并和端到端加密体验。
-
-### 后续优化方向
-
-- **更大的本地题库容量**：让大量题目、日志和笔记也能保持顺滑。
-- **更安心的同步体验**：继续优化恢复流程、冲突处理和数据保护。
-- **更直观的复习分析**：展示薄弱标签、逾期趋势和容易忘的题。
-- **更顺手的高频题体验**：补充更多筛选、覆盖视图和复习建议。
-
----
-
-## English
-
-### Project Introduction
-
-**Crush LeetCode** is a Chrome extension that helps you turn LeetCode practice into a repeatable review system.
-
-After you submit an accepted solution, it records the problem, schedules the next review based on your mastery level, and provides problem notes, today's review list, a full problem library, desktop reminders, weekly reports, and optional cloud sync. You no longer need to maintain a separate spreadsheet or guess what to review today by feel.
-
-### v0.0.4 beta Highlights
-
-This release focuses on two things: **more reliable problem capture** and **company hot questions inside your local library**.
-
-- 🧯 **v0.0.4 beta.1 hotfix is available**: Fixes a v0.0.4 beta issue that could break the problem-page script, restoring Accepted popups and automatic library insertion.
-- ✅ **More reliable LeetCode CN submission detection**: Better separates sample runs from real submissions, reducing stale popups, missed records, and false triggers.
-- 🔥 **Company hot questions are here**: The popup now has Review / Hot tabs, and the full library can switch directly to Company Hot List.
-- 🧭 **Coverage at a glance**: Browse hot questions by company and see what you have already solved locally.
-- 🛡️ **Local-first by default**: Hot questions are matched only against your browser-local library. Your problems, notes, code, and review logs are not uploaded.
-
-### Core Features
-
-**🧠 Auto Capture and Smart Review**
-
-- ✅ **Accepted submissions are saved automatically**: Supports `leetcode.com` and `leetcode.cn`, with a rating panel after each accepted submission.
-- 📆 **Today's review list**: See due, completed, and overdue problems directly in the popup.
-- 🪄 **A review rhythm that adapts to you**: Next review dates change with your mastery feedback instead of fixed reminders.
-
-**🔥 Company Hot Questions and Coverage**
-
-- 🏢 **Browse hot questions by company**: Quickly scan popular questions from companies such as Meituan, ByteDance, Tencent, and Alibaba.
-- 🎯 **Matched only with your local library**: See what you have solved and what is still uncovered without uploading your practice history.
-- 🗂️ **Full Library / Company Hot List switch**: Use the standalone library page for filters, mastery, details, notes, and hot-list coverage.
-
-**✍️ Notes, Reminders, and Data Control**
-
-- 📝 **Per-problem Markdown notes**: Edit, preview, and export your thinking right next to each problem.
-- 🔔 **Desktop reminders and weekly reports**: Get timely review reminders and optional weekly email summaries.
-- 📦 **Safer import and export**: Back up JSON data and preview changes before importing.
-- ☁️ **Optional cloud sync**: Sync to cloud snapshots only after you opt in, using your own recovery code.
-- 🌗 **Bilingual and theme support**: Chinese / English, plus light, dark, and system themes.
-
-### Why It Fits LeetCode Review
-
-- **Close to the LeetCode workflow**: It runs directly on problem pages, the popup, and Settings, so you do not need to switch to another tool.
-- **A more concrete review rhythm**: It does not simply remind you after fixed intervals; it adjusts the interval based on your mastery feedback each time.
-- **The library and notes stay connected**: Problems, ratings, review logs, mastery progress, and Markdown notes all accumulate around the same problem.
-- **Your data can move with you**: JSON backup, Markdown note export, and optional cloud sync reduce the cost of changing devices or reinstalling the browser.
-- **Updates feel lighter**: Announcements, version notices, and daily completion messages can be refreshed remotely, so important information reaches you faster.
-
-### Screenshots
-
-<div align="center">
-
-  <p><strong>Rating Modal</strong></p>
-  <img src="./public/shots/rating-modal.png" alt="Rating Modal" width="720" />
-
-  <p><strong>Dashboard</strong></p>
-  <img src="./public/shots/dashboard.png" alt="Dashboard" width="720" />
-
-  <p><strong>Markdown Notes</strong></p>
-  <img src="./public/shots/notes.png" alt="Markdown Notes" width="720" />
-
-  <p><strong>Settings</strong></p>
-  <img src="./public/shots/settings.png" alt="Settings" width="720" />
-
-</div>
-
-### Installation and Usage
-
-1. Download the latest zip from [Releases](https://github.com/oldtommmy/crush_leetcode/releases) and unzip it.
-2. Open `chrome://extensions/` in Chrome.
-3. Enable **Developer mode**.
-4. Click **Load unpacked** and select the extracted folder.
-
-### Usage Flow
-
-1. Solve and submit problems on LeetCode as usual.
-2. After Accepted, choose your mastery level: `No clue`, `Hard`, `Normal`, or `Too easy`.
-3. Open the extension popup to review today's plan, hot recommendations, and official announcements.
-4. Write Markdown notes from the problem page, popup, or full library page.
-5. Configure reminders, weekly digest email, import/export, notes export, and optional cloud sync from the settings page.
-
-### Cloud Sync Notes
-
-Cloud sync is optional. Once enabled, the extension tries to upload a cloud snapshot after key local data changes. You can also upload or restore manually from Settings.
-
-- **The recovery code is set by the user**: An email plus a private suffix is recommended, for example `name@example.com-crush-2026-private`.
-- **The recovery code must be remembered**: Restoring data requires the same code. The extension and service do not store the plaintext recovery code.
-- **Avoid short or common codes**: Weak codes increase collision and accidental-restore risk.
-- **Sync currently uses snapshots**: This version mainly syncs whole data snapshots. Conflict merging and end-to-end encryption will continue to improve later.
-
-### Future Optimization Directions
-
-- **Roomier local storage**: Keep large libraries, logs, and notes smooth over time.
-- **More reassuring sync**: Improve restore flows, conflict handling, and data protection.
-- **Clearer review analytics**: Surface weak tags, overdue trends, and problems you often forget.
-- **Better hot-list workflows**: Add richer filters, coverage views, and review suggestions.
-
----
-
-## Development
+## 开发
 
 ```bash
 npm install
@@ -231,30 +153,30 @@ npm test
 npm run build
 ```
 
-### Environment
+### 项目结构
 
-Runtime service endpoints and cloud-sync credentials are provided through local environment files during development and build. Do not commit real deployment details, service keys, or private operational notes to the public repository.
+- `src/background`：Service Worker、提醒、通知、公告、同步与周报触发。
+- `src/content`：LeetCode 页面识别、Accepted 监听、评分与悬浮 Logo 入口。
+- `src/popup`：今日计划、紧凑题库、高频题与笔记编辑。
+- `src/options`：主题、提醒、导入导出、云同步与其他设置。
+- `src/library`：完整题库与大厂高频题视图。
+- `src/shared`：存储、FSRS 调度、选择器、国际化、同步与共享类型。
+- `tests`：存储、调度、提醒、导入导出和页面桥接等自动化测试。
 
-Optional build-time endpoints:
+### 环境变量
 
-- `VITE_CRUSH_CODETOP_BASE_URL`: CodeTop metadata API base URL. Defaults to `https://mail.crushlc.site/codetop`.
+开发与构建时，运行时服务地址和同步配置应通过本地环境文件提供。请勿提交真实服务凭据、密钥或私人运维信息。
 
-### Project Layout
+可选构建时配置：
 
-- `src/background`: service worker, alarms, notifications, announcements, sync triggers, weekly digest.
-- `src/content`: LeetCode page detection, Accepted observer, and floating UI.
-- `src/options`: Settings, reminders, email digest, import/export, library entry, and cloud sync.
-- `src/popup`: daily plan, compact library, hot questions, and note editor.
-- `src/library`: standalone full library and company hot-list views.
-- `src/shared`: storage, scheduler, selectors, i18n, sync, shared UI, and types.
-- `tests`: scheduler, selector, import, alarm, announcement, and delivery coverage.
+- `VITE_CRUSH_CODETOP_BASE_URL`：CodeTop 元数据 API 基地址；默认值为 `https://mail.crushlc.site/codetop`。
 
 ## License
 
 Licensed under **CC BY-NC 4.0**. Non-commercial use only.
 
 <div align="center">
-  <p><strong>If Crush LeetCode helps you, a Star means a lot.</strong></p>
-  <p><strong>如果这个项目对你有帮助，欢迎 Star 支持。</strong></p>
-  <img src="./public/icons/wechat-pay.png" alt="Sponsor" width="200" />
+  <p><strong>如果 Crush LeetCode 对你有帮助，欢迎 Star 支持。</strong></p>
+  <p><a href="https://github.com/oldtommmy/crush_leetcode">⭐ Star on GitHub</a></p>
+  <img src="./public/icons/wechat-pay.png" alt="Sponsor Crush LeetCode" width="180" />
 </div>

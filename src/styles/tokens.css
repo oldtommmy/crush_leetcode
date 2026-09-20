@@ -1,0 +1,199 @@
+/* Crush LeetCode design tokens — single source of truth.
+ *
+ * Light is the default; dark only rewrites semantic variables (see .dark below).
+ * Tokens are declared on both :root (popup / options / library standalone pages)
+ * and :host (the content script's Shadow DOM root) so the injection layer can
+ * resolve them too. See UI plan §2.1 / §4.4.
+ */
+:root,
+:host {
+  /* Brand accent: keep LeetCode amber, the single accent color. */
+  --brand: #ff9f0a;
+  --brand-strong: #f08c00;
+  --brand-soft: #fff4e0;
+  --brand-ring: rgba(255, 159, 10, 0.32);
+
+  /* Neutrals: warm-toned (not pure gray) to sit well next to amber. */
+  --n0: #ffffff;
+  --n50: #faf9f7;
+  --n100: #f4f2ee;
+  --n150: #eceae4;
+  --n200: #e3e0d9;
+  --n300: #d3cfc6;
+  --n400: #a8a39a;
+  --n500: #827d73;
+  --n600: #5f5a51;
+  --n700: #433f39;
+  --n800: #2b2823;
+  --n900: #1c1a17;
+
+  /* Semantic rating scale (the only one, used everywhere). */
+  --r-easy: #12b981;
+  --r-good: #3b82f6;
+  --r-hard: #f59e0b;
+  --r-stuck: #f43f5e;
+  --r-easy-soft: rgba(18, 185, 129, 0.12);
+  --r-good-soft: rgba(59, 130, 246, 0.12);
+  --r-hard-soft: rgba(245, 158, 11, 0.14);
+  --r-stuck-soft: rgba(244, 63, 94, 0.12);
+  /* Ink = text color on the soft background. To match the v1 prototype 1:1 we
+     render the bright base color directly on the soft background (the prototype
+     chips / rating rows use `color: var(--r-*)`), so ink mirrors the base scale
+     instead of a darkened AA variant. */
+  --r-easy-ink: var(--r-easy);
+  --r-good-ink: var(--r-good);
+  --r-hard-ink: var(--r-hard);
+  --r-stuck-ink: var(--r-stuck);
+
+  /* Memory-strength continuous gradient (no more red/green binary). */
+  --strength-grad: linear-gradient(90deg, #f43f5e 0%, #f59e0b 45%, #12b981 100%);
+  --danger: #f43f5e;
+  --danger-rgb: 244 63 94;
+  --success: #12b981;
+  --info: #3b82f6;
+
+  /* Surfaces / text / borders (dark mode only changes these). */
+  --bg: var(--n50);
+  --surface: var(--n0);
+  --surface-2: var(--n100);
+  --elevated: var(--n0);
+  --text: var(--n900);
+  --text-2: var(--n500);
+  --text-3: var(--n400);
+  --border: var(--n200);
+  --border-soft: var(--n150);
+
+  /* Shadows: soft warm, no dead black. */
+  --shadow-sm: 0 1px 2px rgba(28, 26, 23, 0.05), 0 1px 3px rgba(28, 26, 23, 0.06);
+  --shadow-md: 0 4px 12px rgba(28, 26, 23, 0.07), 0 2px 4px rgba(28, 26, 23, 0.05);
+  --shadow-lg: 0 12px 32px rgba(28, 26, 23, 0.1), 0 4px 8px rgba(28, 26, 23, 0.05);
+  --shadow-brand: 0 6px 20px rgba(255, 159, 10, 0.28);
+
+  /* Radius: 5-tier rhythm. */
+  --r-xs: 8px;
+  --r-s: 12px;
+  --r-m: 16px;
+  --r-l: 20px;
+  --r-xl: 28px;
+
+  /* Motion: standard / spring. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 0.16s;
+  --dur: 0.24s;
+  --dur-slow: 0.42s;
+
+  /* Font stack — mirrors the v1 prototype (PingFang / YaHei first). */
+  --font: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Inter, system-ui, sans-serif;
+}
+
+.dark,
+.dark :host {
+  --brand: #ffb340;
+  --brand-strong: #ff9f0a;
+  --brand-soft: rgba(255, 179, 64, 0.14);
+  --brand-ring: rgba(255, 179, 64, 0.3);
+  --r-easy: #2dd4a0;
+  --r-good: #5b9bff;
+  --r-hard: #f8b13f;
+  --r-stuck: #fb6b83;
+  --r-easy-soft: rgba(45, 212, 160, 0.15);
+  --r-good-soft: rgba(91, 155, 255, 0.15);
+  --r-hard-soft: rgba(248, 177, 63, 0.16);
+  --r-stuck-soft: rgba(251, 107, 131, 0.15);
+  --r-easy-ink: var(--r-easy);
+  --r-good-ink: var(--r-good);
+  --r-hard-ink: var(--r-hard);
+  --r-stuck-ink: var(--r-stuck);
+  --strength-grad: linear-gradient(90deg, #fb6b83 0%, #f8b13f 45%, #2dd4a0 100%);
+  --danger: #fb6b83;
+  --danger-rgb: 251 107 131;
+  --success: #2dd4a0;
+  --info: #5b9bff;
+  --bg: #161514;
+  --surface: #201e1b;
+  --surface-2: #2a2723;
+  --elevated: #242220;
+  --text: #f2efe9;
+  --text-2: #a49e93;
+  --text-3: #726c63;
+  --border: #322e29;
+  --border-soft: #2a2723;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-brand: 0 6px 22px rgba(255, 159, 10, 0.3);
+}
+
+/* Motion utilities — mirror the v1 prototype's entrance animations.
+   (tailwindcss-animate is not installed, so these are hand-authored to keep
+   the AC modal's spring entrance + check "pop" faithful to the prototype.) */
+@keyframes clc-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes clc-modal-in {
+  0% { transform: translateY(16px) scale(0.94); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes clc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes clc-shimmer {
+  100% { transform: translateX(100%); }
+}
+.clc-pop { animation: clc-pop 0.5s var(--ease-spring); }
+.clc-modal-in { animation: clc-modal-in var(--dur-slow) var(--ease-spring); }
+.clc-fade-in { animation: clc-fade-in var(--dur) var(--ease-standard); }
+
+/* Custom dropdown / select popover entrance — a soft spring drop so the
+   product's selects never fall back to the native OS look-and-feel. */
+@keyframes clc-dropdown-in {
+  0% { transform: translateY(-6px) scale(0.98); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.clc-dropdown-in { animation: clc-dropdown-in var(--dur) var(--ease-spring); transform-origin: top; }
+
+/* LeetCode floating Logo — a static brand mark with a restrained double ring.
+   It deliberately has no ambient or state-driven animation. */
+.clc-floating-logo {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(240, 140, 0, 0.42);
+  border-radius: 9999px;
+  box-shadow: 0 0 0 5px rgba(255, 159, 10, 0.1), 0 6px 16px rgba(28, 26, 23, 0.14);
+}
+.clc-floating-logo > img {
+  display: block;
+  width: 76%;
+  height: 76%;
+  border-radius: 24%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.clc-floating-logo-button {
+  transform-origin: center;
+  transition: transform var(--dur-fast) var(--ease-spring), filter var(--dur-fast) var(--ease-standard);
+}
+.clc-floating-logo-button:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 6px 12px rgba(240, 140, 0, 0.2));
+}
+.clc-floating-logo-button:active { transform: scale(0.96); }
+.clc-floating-logo-button--dragging,
+.clc-floating-logo-button--dragging:hover,
+.clc-floating-logo-button--dragging:active {
+  cursor: grabbing;
+  transform: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clc-pop,
+  .clc-modal-in,
+  .clc-dropdown-in { animation: clc-fade-in var(--dur) var(--ease-standard); }
+  .clc-floating-logo-button { transition: none; }
+}

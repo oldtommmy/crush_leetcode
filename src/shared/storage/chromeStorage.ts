@@ -1,6 +1,7 @@
 import {
   DEFAULT_DAILY_REVIEW_LIMIT,
   DEFAULT_STATE,
+  detectDefaultLocale,
   MAX_DAILY_REVIEW_LIMIT,
   MIN_DAILY_REVIEW_LIMIT,
   STORAGE_KEY
@@ -9,11 +10,13 @@ import { problemIdFor } from '../review/scheduler';
 import { FSRSScheduler } from '../review/fsrsScheduler';
 import { normalizeReminderDelivery } from '../reminders/delivery';
 import { uploadSupabaseSnapshot } from '../sync/supabaseSync';
+import { pruneReviewLogs } from './retention';
 import {
   DebugScenarioPreset,
   ExtensionStorageState,
   FSRSState,
   ImportPreview,
+  PetSize,
   Problem,
   ProblemNote,
   ReviewLog,
@@ -105,6 +108,10 @@ function normalizeDailyReviewLimit(value: unknown): number {
   }
 
   return Math.min(MAX_DAILY_REVIEW_LIMIT, Math.max(MIN_DAILY_REVIEW_LIMIT, Math.round(value)));
+}
+
+function normalizePetSize(value: unknown): PetSize {
+  return value === 'small' || value === 'medium' || value === 'large' ? value : 'medium';
 }
 
 function normalizeState(value: unknown, fallback: FSRSState): FSRSState {
@@ -527,6 +534,7 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
     settings: {
       ...DEFAULT_STATE.settings,
       ...input?.settings,
+      locale: input?.settings?.locale ?? detectDefaultLocale(),
       reviewPolicy: policy,
       reminders: {
         ...DEFAULT_STATE.settings.reminders,
@@ -543,6 +551,7 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
         ...input?.settings?.cloudSync,
         syncKey: input?.settings?.cloudSync?.syncKey?.trim() || undefined
       },
+      petSize: normalizePetSize(input?.settings?.petSize),
       dailyReviewLimit: normalizeDailyReviewLimit(input?.settings?.dailyReviewLimit)
     },
     metadata: {
@@ -552,6 +561,7 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
       debugActivePreset: input?.metadata?.debugActivePreset,
       debugCoveredPresets: normalizeDebugPresets(input?.metadata?.debugCoveredPresets),
       storageBackend: 'local',
+      revision: typeof input?.metadata?.revision === 'number' ? input.metadata.revision : undefined,
       reminderDelivery: normalizeReminderDelivery(input?.metadata?.reminderDelivery),
       dismissedAnnouncementIds: Array.isArray(input?.metadata?.dismissedAnnouncementIds)
         ? input.metadata.dismissedAnnouncementIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
@@ -568,31 +578,62 @@ export async function getState(): Promise<ExtensionStorageState> {
 }
 
 async function writeStateNow(state: ExtensionStorageState): Promise<void> {
-  assertStateFitsStorage(state);
-  await chrome.storage.local.set({
-    [STORAGE_KEY]: {
-      ...state,
-      metadata: {
-        ...state.metadata,
-        storageBackend: 'local'
-      }
+  // A1: bound the only unbounded field so heavy long-term users never grow the
+  // single-key blob past the storage cap. Keep the newest N logs per problem.
+  const prunedLogs = pruneReviewLogs(state.reviewLogsById);
+  const stateToPersist =
+    prunedLogs === state.reviewLogsById ? state : { ...state, reviewLogsById: prunedLogs };
+
+  assertStateFitsStorage(stateToPersist);
+  const nextRevision = (stateToPersist.metadata.revision ?? 0) + 1;
+  const persisted: ExtensionStorageState = {
+    ...stateToPersist,
+    metadata: {
+      ...stateToPersist.metadata,
+      storageBackend: 'local',
+      revision: nextRevision
     }
+  };
+  await chrome.storage.local.set({
+    [STORAGE_KEY]: persisted
   });
-  scheduleAutoCloudSync(state);
+  scheduleAutoCloudSync(persisted);
 }
 
 export async function setState(state: ExtensionStorageState): Promise<void> {
   return enqueueStateWrite(() => writeStateNow(state));
 }
 
+/**
+ * Number of times updateState re-runs the updater when a concurrent write from
+ * another context (popup / options / library / service worker) lands between
+ * our read and write.
+ */
+const MAX_UPDATE_RETRIES = 5;
+
 export async function updateState(
   updater: (state: ExtensionStorageState) => ExtensionStorageState | Promise<ExtensionStorageState>
 ): Promise<ExtensionStorageState> {
   return enqueueStateWrite(async () => {
-    const state = await getState();
-    const nextState = await updater(state);
-    await writeStateNow(nextState);
-    return nextState;
+    // A2: the in-process write queue only serializes writes originating in THIS
+    // JS context. Other contexts share chrome.storage.local, so we guard against
+    // lost updates with an optimistic revision check: read -> apply -> verify the
+    // stored revision is unchanged -> write. On conflict we re-read the fresh
+    // state and re-apply the updater, so no context's write silently clobbers
+    // another's.
+    for (let attempt = 0; ; attempt += 1) {
+      const state = await getState();
+      const baseRevision = state.metadata.revision ?? 0;
+      const nextState = await updater(state);
+
+      const latest = await getState();
+      const latestRevision = latest.metadata.revision ?? 0;
+      if (latestRevision === baseRevision || attempt >= MAX_UPDATE_RETRIES) {
+        await writeStateNow(nextState);
+        return nextState;
+      }
+      // A concurrent write happened; retry against the fresh state.
+    }
   });
 }
 
@@ -625,7 +666,26 @@ export async function importState(input: unknown): Promise<ExtensionStorageState
     throw new Error('Invalid backup file.');
   }
 
-  const state = mergeState(input as Partial<ExtensionStorageState>);
+  const merged = mergeState(input as Partial<ExtensionStorageState>);
+
+  // A4: a backup file must not be able to overwrite the local sync/mailer
+  // credentials. Preserve whatever is already stored on this device instead of
+  // trusting the imported blob. (Cloud restore passes the local syncKey through
+  // its own input, so this preserves the same value it would have applied.)
+  const current = await getState();
+  const state: ExtensionStorageState = {
+    ...merged,
+    settings: {
+      ...merged.settings,
+      cloudSync: current.settings.cloudSync,
+      emailWebhook: {
+        ...merged.settings.emailWebhook,
+        toEmail: current.settings.emailWebhook.toEmail,
+        betaAccessCode: current.settings.emailWebhook.betaAccessCode
+      }
+    }
+  };
+
   await setState(state);
   return state;
 }

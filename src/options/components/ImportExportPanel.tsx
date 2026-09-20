@@ -7,6 +7,7 @@ import {
   uploadSupabaseSnapshot
 } from '../../shared/sync/supabaseSync';
 import { updateState } from '../../shared/storage/chromeStorage';
+import { buildBackupExport } from '../../shared/storage/backup';
 
 interface ImportExportPanelProps {
   state: ExtensionStorageState;
@@ -45,7 +46,8 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
   }, [state.settings.cloudSync, editingRecoveryCode]);
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const backup = buildBackupExport(state);
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -298,27 +300,27 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
   };
 
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#262626]">
+    <section className="rounded-m border border-border-soft bg-surface p-6 shadow-sm">
       <div className="mb-6 flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-500">
+        <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-brand-soft text-brand-strong">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
         </div>
-        <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100">{t(locale, 'dataBackup')}</h2>
+        <h2 className="text-base font-semibold text-text">{t(locale, 'dataBackup')}</h2>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
+        <div className="mb-4 rounded-sm bg-stuck-soft p-3 text-xs font-medium text-stuck-ink">
           {error}
         </div>
       )}
 
-      <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 dark:border-sky-500/20 dark:bg-sky-500/10">
+      <div className="rounded-m border border-border-soft bg-surface-2 p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-sky-600 dark:bg-sky-500/10 dark:text-sky-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-brand-soft text-brand-strong">
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3v12" />
               <path d="m8 11 4 4 4-4" />
@@ -327,10 +329,10 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-black text-sky-900 dark:text-sky-100">
+            <h3 className="text-sm font-semibold text-text">
               {locale === 'zh-CN' ? 'Crush LeetCode 云同步' : 'Crush LeetCode cloud sync'}
             </h3>
-            <p className="mt-1 text-xs font-medium text-sky-700/80 dark:text-sky-200/80">
+            <p className="mt-1 text-xs font-medium text-text-2">
               {locale === 'zh-CN' ? '先保存恢复码，再上传或恢复数据。' : 'Save a recovery code before upload or restore.'}
             </p>
           </div>
@@ -339,7 +341,7 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
         <div className="mt-4 grid gap-2">
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
             <input
-              className="rounded-xl border border-sky-100 bg-white px-3 py-2 text-xs font-medium outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 disabled:cursor-not-allowed disabled:bg-sky-50 disabled:text-sky-700/70 dark:border-sky-500/20 dark:bg-neutral-950 dark:text-neutral-100 dark:disabled:bg-neutral-900"
+              className="rounded-sm border border-border bg-surface px-3 py-2 text-xs font-medium text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-brand disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3"
               placeholder={locale === 'zh-CN' ? '例如 tom@example.com-crush-2026' : 'e.g. tom@example.com-crush-2026'}
               value={recoveryCodeDraft}
               disabled={!canEditRecoveryCode}
@@ -348,7 +350,7 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
             {canEditRecoveryCode ? (
               <button
                 type="button"
-                className="rounded-xl bg-sky-600 px-3 py-2 text-xs font-black text-white transition hover:bg-sky-700"
+                className="rounded-sm bg-brand px-3 py-2 text-xs font-semibold text-white transition hover:-translate-y-0.5"
                 onClick={() => void saveRecoveryCode()}
               >
                 {locale === 'zh-CN' ? '保存' : 'Save'}
@@ -357,14 +359,14 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  className="rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-black text-sky-700 transition hover:bg-sky-50 dark:border-sky-500/20 dark:bg-neutral-950 dark:text-sky-300"
+                  className="rounded-sm border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-2 transition hover:bg-surface-2"
                   onClick={startRecoveryCodeChange}
                 >
                   {locale === 'zh-CN' ? '修改' : 'Change'}
                 </button>
                 <button
                   type="button"
-                  className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-black text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/20 dark:bg-neutral-950 dark:text-rose-300"
+                  className="rounded-sm border border-danger/40 bg-stuck-soft px-3 py-2 text-xs font-semibold text-danger transition hover:bg-danger hover:text-white"
                   onClick={() => setShowResetCloudConfirm(true)}
                 >
                   {locale === 'zh-CN' ? '重开' : 'Reset'}
@@ -372,7 +374,7 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
               </div>
             )}
           </div>
-          <p className="px-1 text-[10px] font-bold leading-relaxed text-sky-700 dark:text-sky-200">
+          <p className="px-1 text-[10px] font-medium leading-relaxed text-text-2">
             {locale === 'zh-CN'
               ? '恢复码保存后会锁定；如需更换，请先用旧码恢复数据。'
               : 'The code locks after saving. Restore with the old code before changing it.'}
@@ -380,10 +382,10 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
         </div>
 
         <div className="mt-3 grid gap-2">
-          <label className="flex items-start gap-3 rounded-xl border border-sky-100 bg-white p-3 text-left dark:border-sky-500/20 dark:bg-neutral-950">
+          <label className="flex items-start gap-3 rounded-sm border border-border-soft bg-surface p-3 text-left">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-sky-200 text-sky-600"
+              className="mt-0.5 h-4 w-4 rounded border-border text-brand"
               checked={Boolean(cloudSync.enabled && hasSavedRecoveryCode && !editingRecoveryCode)}
               disabled={!hasSavedRecoveryCode || editingRecoveryCode}
               onChange={(event) => {
@@ -401,7 +403,7 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
               }}
             />
             <span>
-              <span className="block text-xs font-black text-sky-900 dark:text-sky-100">
+              <span className="block text-xs font-semibold text-text">
                 {hasSavedRecoveryCode && !editingRecoveryCode
                   ? (locale === 'zh-CN' ? '启用自动同步' : 'Enable auto sync')
                   : (locale === 'zh-CN' ? '先保存恢复码' : 'Save recovery code first')}
@@ -410,7 +412,7 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
           </label>
           <button
             type="button"
-            className="rounded-xl bg-sky-600 py-2.5 text-xs font-black text-white transition hover:bg-sky-700 disabled:opacity-60"
+            className="rounded-sm bg-brand py-2.5 text-xs font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
             onClick={() => void uploadCloudSnapshot()}
             disabled={syncBusy || !hasSavedRecoveryCode || editingRecoveryCode}
           >
@@ -418,7 +420,7 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
           </button>
           <button
             type="button"
-            className="rounded-xl border border-sky-200 bg-white py-2.5 text-xs font-black text-sky-700 transition hover:bg-sky-50 disabled:opacity-60 dark:border-sky-500/20 dark:bg-neutral-950 dark:text-sky-300"
+            className="rounded-sm border border-border bg-surface py-2.5 text-xs font-semibold text-text-2 transition hover:bg-surface-2 disabled:opacity-60"
             onClick={() => void downloadCloudSnapshot()}
             disabled={syncBusy || !hasSavedRecoveryCode || editingRecoveryCode}
           >
@@ -427,15 +429,15 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
         </div>
 
         {(syncMessage || cloudSync.lastSyncedAt || cloudSync.lastError) && (
-          <p className="mt-3 text-[10px] font-bold leading-relaxed text-sky-700 dark:text-sky-200">
+          <p className="mt-3 text-[10px] font-medium leading-relaxed text-text-2">
             {syncMessage || cloudSync.lastError || `${locale === 'zh-CN' ? '上次同步' : 'Last synced'}: ${cloudSync.lastSyncedAt}`}
           </p>
         )}
       </div>
 
       <div className="mt-5 grid gap-3">
-        <button 
-          className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-bold text-white transition-all hover:bg-amber-600 hover:shadow-lg active:scale-[0.98] dark:text-neutral-900" 
+        <button
+          className="flex items-center justify-center gap-2 rounded-sm bg-brand py-3 text-sm font-semibold text-white shadow-brand transition-transform duration-200 ease-spring hover:-translate-y-0.5 active:scale-[0.98]"
           onClick={exportData}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -445,8 +447,8 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
           </svg>
           {t(locale, 'exportData')}
         </button>
-        
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 py-3 text-sm font-bold text-neutral-700 transition-all hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800">
+
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-sm border border-border bg-surface-2 py-3 text-sm font-semibold text-text-2 transition-all hover:bg-surface">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
@@ -457,7 +459,7 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
         </label>
 
         <button
-          className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white py-3 text-sm font-bold text-neutral-700 transition-all hover:bg-neutral-50 active:scale-[0.98] dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-900"
+          className="flex items-center justify-center gap-2 rounded-sm border border-border bg-surface py-3 text-sm font-semibold text-text-2 transition-all hover:bg-surface-2 active:scale-[0.98]"
           onClick={exportNotesMarkdown}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -469,57 +471,57 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
           {locale === 'zh-CN' ? '导出 Markdown 笔记' : 'Export Markdown notes'}
         </button>
       </div>
-      
-      <p className="mt-4 text-center text-[10px] text-neutral-500">
+
+      <p className="mt-4 text-center text-[10px] text-text-2">
         {t(locale, 'exportImportDesc')}
       </p>
 
       {/* Import Preview Modal */}
       {preview && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-[#262626] animate-in zoom-in-95 duration-200">
-            <div className="bg-neutral-900 p-6 text-white dark:bg-black">
-              <h3 className="text-lg font-bold">{t(locale, 'importPreview')}</h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-6 clc-fade-in">
+          <div className="w-full max-w-sm overflow-hidden rounded-lg bg-elevated shadow-lg clc-modal-in">
+            <div className="bg-surface-2 p-6 text-text">
+              <h3 className="text-lg font-semibold">{t(locale, 'importPreview')}</h3>
               {preview.version && (
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest opacity-60">
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-text-2">
                   {t(locale, 'previewVersion')}: v{preview.version}
                 </p>
               )}
             </div>
-            
+
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900/50">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{t(locale, 'previewProblems')}</span>
-                  <div className="text-lg font-black">{preview.problemCount}</div>
-                  <div className="mt-1 flex gap-2 text-[10px] font-bold">
-                    <span className="text-emerald-500">+{preview.newProblemCount} {t(locale, 'previewNew')}</span>
-                    <span className="text-amber-500">↻{preview.overwrittenProblemCount} {t(locale, 'previewOverwrite')}</span>
+                <div className="rounded-m bg-surface-2 p-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-text-3">{t(locale, 'previewProblems')}</span>
+                  <div className="text-lg font-semibold text-text">{preview.problemCount}</div>
+                  <div className="mt-1 flex gap-2 text-[10px] font-semibold">
+                    <span className="text-easy-ink">+{preview.newProblemCount} {t(locale, 'previewNew')}</span>
+                    <span className="text-hard-ink">↻{preview.overwrittenProblemCount} {t(locale, 'previewOverwrite')}</span>
                   </div>
                 </div>
-                <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900/50">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{t(locale, 'previewNotes')}</span>
-                  <div className="text-lg font-black">{preview.noteCount}</div>
+                <div className="rounded-m bg-surface-2 p-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-text-3">{t(locale, 'previewNotes')}</span>
+                  <div className="text-lg font-semibold text-text">{preview.noteCount}</div>
                 </div>
-                <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900/50">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{t(locale, 'previewLogs')}</span>
-                  <div className="text-lg font-black">{preview.reviewLogCount}</div>
+                <div className="rounded-m bg-surface-2 p-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-text-3">{t(locale, 'previewLogs')}</span>
+                  <div className="text-lg font-semibold text-text">{preview.reviewLogCount}</div>
                 </div>
-                <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900/50">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{t(locale, 'previewConflicts')}</span>
-                  <div className={`text-lg font-black ${preview.errorMessages.length > 0 ? 'text-rose-500' : ''}`}>
+                <div className="rounded-m bg-surface-2 p-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-text-3">{t(locale, 'previewConflicts')}</span>
+                  <div className={`text-lg font-semibold ${preview.errorMessages.length > 0 ? 'text-danger' : 'text-text'}`}>
                     {preview.errorMessages.length + preview.warningMessages.length}
                   </div>
                 </div>
               </div>
 
               {(preview.warningMessages.length > 0 || preview.errorMessages.length > 0) && (
-                <div className="mt-4 max-h-32 overflow-y-auto space-y-2 rounded-xl bg-rose-50 p-3 text-[10px] dark:bg-rose-900/20">
+                <div className="mt-4 max-h-32 overflow-y-auto space-y-2 rounded-sm bg-stuck-soft p-3 text-[10px]">
                   {preview.errorMessages.map((msg, i) => (
-                    <p key={i} className="font-bold text-rose-600 dark:text-rose-400">Error: {msg}</p>
+                    <p key={i} className="font-semibold text-stuck-ink">Error: {msg}</p>
                   ))}
                   {preview.warningMessages.map((msg, i) => (
-                    <p key={i} className="font-medium text-amber-700 dark:text-amber-500">Warning: {msg}</p>
+                    <p key={i} className="font-medium text-hard-ink">Warning: {msg}</p>
                   ))}
                 </div>
               )}
@@ -530,14 +532,14 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
                     setPreview(null);
                     setPendingCloudRestore(false);
                   }}
-                  className="flex-1 rounded-xl bg-neutral-100 py-3 text-sm font-bold text-neutral-600 transition-all hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400"
+                  className="flex-1 rounded-sm border border-border bg-surface-2 py-3 text-sm font-semibold text-text-2 transition-all hover:bg-surface"
                 >
                   {t(locale, 'cancel')}
                 </button>
                 <button
                   onClick={confirmImport}
                   disabled={!preview.valid}
-                  className="flex-1 rounded-xl bg-neutral-900 py-3 text-sm font-bold text-white transition-all hover:bg-black disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+                  className="flex-1 rounded-sm bg-brand py-3 text-sm font-semibold text-white shadow-brand transition-all hover:-translate-y-0.5 disabled:opacity-50"
                 >
                   {t(locale, 'confirmImport')}
                 </button>
@@ -548,16 +550,16 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
       )}
 
       {showChangeCodeGuide && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-[#262626] animate-in zoom-in-95 duration-200">
-            <div className="bg-sky-600 p-6 text-white">
-              <h3 className="text-lg font-bold">{locale === 'zh-CN' ? '修改恢复码' : 'Change recovery code'}</h3>
-              <p className="mt-1 text-xs font-bold opacity-80">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-6 clc-fade-in">
+          <div className="w-full max-w-sm overflow-hidden rounded-lg bg-elevated shadow-lg clc-modal-in">
+            <div className="bg-surface-2 p-6 text-text">
+              <h3 className="text-lg font-semibold">{locale === 'zh-CN' ? '修改恢复码' : 'Change recovery code'}</h3>
+              <p className="mt-1 text-xs font-medium text-text-2">
                 {locale === 'zh-CN' ? '先恢复旧数据，再设置新码。' : 'Restore old data before setting a new code.'}
               </p>
             </div>
             <div className="p-6">
-              <p className="text-sm leading-6 text-neutral-700 dark:text-neutral-300">
+              <p className="text-sm leading-6 text-text-2">
                 {locale === 'zh-CN'
                   ? '为了避免你换码后找不到旧远端数据，请先用当前恢复码拉取云端快照，并在预览弹窗里确认导入。导入完成后，恢复码输入框会解锁。'
                   : 'To avoid losing access to old cloud data, first download the cloud snapshot with the current recovery code and confirm the import. The recovery code field will unlock after import.'}
@@ -565,14 +567,14 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
               <div className="mt-6 flex gap-3">
                 <button
                   type="button"
-                  className="flex-1 rounded-xl bg-neutral-100 py-3 text-sm font-bold text-neutral-600 transition-all hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400"
+                  className="flex-1 rounded-sm border border-border bg-surface-2 py-3 text-sm font-semibold text-text-2 transition-all hover:bg-surface"
                   onClick={() => setShowChangeCodeGuide(false)}
                 >
                   {t(locale, 'cancel')}
                 </button>
                 <button
                   type="button"
-                  className="flex-1 rounded-xl bg-sky-600 py-3 text-sm font-bold text-white transition-all hover:bg-sky-700 disabled:opacity-60"
+                  className="flex-1 rounded-sm bg-brand py-3 text-sm font-semibold text-white shadow-brand transition-all hover:-translate-y-0.5 disabled:opacity-60"
                   onClick={beginSafeRecoveryCodeChange}
                   disabled={syncBusy}
                 >
@@ -585,16 +587,16 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
       )}
 
       {showResetCloudConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-[#262626] animate-in zoom-in-95 duration-200">
-            <div className="bg-rose-500 p-6 text-white">
-              <h3 className="text-lg font-bold">{locale === 'zh-CN' ? '重开云同步？' : 'Reset cloud sync?'}</h3>
-              <p className="mt-1 text-xs font-bold opacity-80">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-6 clc-fade-in">
+          <div className="w-full max-w-sm overflow-hidden rounded-lg bg-elevated shadow-lg clc-modal-in">
+            <div className="bg-stuck-soft p-6 text-stuck-ink">
+              <h3 className="text-lg font-semibold">{locale === 'zh-CN' ? '重开云同步？' : 'Reset cloud sync?'}</h3>
+              <p className="mt-1 text-xs font-medium opacity-80">
                 {locale === 'zh-CN' ? '本机将改用新的恢复码。' : 'This device will use a new recovery code.'}
               </p>
             </div>
             <div className="p-6">
-              <p className="text-sm leading-6 text-neutral-700 dark:text-neutral-300">
+              <p className="text-sm leading-6 text-text-2">
                 {locale === 'zh-CN'
                   ? '这不会删除旧云端快照，但本机之后不会再使用当前恢复码。确认后请设置新的恢复码。'
                   : 'This will not delete the old cloud snapshot, but this device will stop using the current recovery code. Set a new code after confirming.'}
@@ -602,14 +604,14 @@ export function ImportExportPanel({ state, locale, onImport, onChanged }: Import
               <div className="mt-6 flex gap-3">
                 <button
                   type="button"
-                  className="flex-1 rounded-xl bg-neutral-100 py-3 text-sm font-bold text-neutral-600 transition-all hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400"
+                  className="flex-1 rounded-sm border border-border bg-surface-2 py-3 text-sm font-semibold text-text-2 transition-all hover:bg-surface"
                   onClick={() => setShowResetCloudConfirm(false)}
                 >
                   {t(locale, 'cancel')}
                 </button>
                 <button
                   type="button"
-                  className="flex-1 rounded-xl bg-rose-500 py-3 text-sm font-bold text-white transition-all hover:bg-rose-600"
+                  className="flex-1 rounded-sm bg-danger py-3 text-sm font-semibold text-white transition-all hover:opacity-90"
                   onClick={() => void resetCloudStorageLink()}
                 >
                   {locale === 'zh-CN' ? '确认重开' : 'Reset'}

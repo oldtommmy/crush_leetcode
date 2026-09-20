@@ -43,10 +43,10 @@ function masteryLabel(stability: number, locale: Locale): string {
 function masteryClassName(stability: number): string {
   const tier = getMasteryTier(stability);
   return {
-    new: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300',
-    familiar: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300',
-    proficient: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300',
-    mastered: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300'
+    new: 'bg-surface-2 text-text-2',
+    familiar: 'bg-good-soft text-good-ink',
+    proficient: 'bg-hard-soft text-hard-ink',
+    mastered: 'bg-easy-soft text-easy-ink'
   }[tier];
 }
 
@@ -58,28 +58,28 @@ function difficultyMeta(difficulty: ProblemDifficulty | 'all', locale: Locale): 
   const map = {
     all: {
       label: locale === 'zh-CN' ? '全部' : 'All',
-      className: 'border-neutral-200 bg-white text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
-      activeClassName: 'border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-900'
+      className: 'bg-surface-2 text-text-2',
+      activeClassName: 'bg-brand text-white shadow-sm'
     },
     Easy: {
       label: locale === 'zh-CN' ? '简单' : 'Easy',
-      className: 'border-emerald-100 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400',
-      activeClassName: 'border-emerald-500 bg-emerald-500 text-white shadow-sm dark:border-emerald-400 dark:bg-emerald-500 dark:text-white'
+      className: 'bg-easy-soft text-easy-ink',
+      activeClassName: 'bg-easy text-white shadow-sm'
     },
     Medium: {
       label: locale === 'zh-CN' ? '中等' : 'Medium',
-      className: 'border-amber-100 bg-amber-50 text-amber-600 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400',
-      activeClassName: 'border-amber-500 bg-amber-500 text-white shadow-sm dark:border-amber-400 dark:bg-amber-500 dark:text-neutral-950'
+      className: 'bg-hard-soft text-hard-ink',
+      activeClassName: 'bg-hard text-white shadow-sm'
     },
     Hard: {
       label: locale === 'zh-CN' ? '困难' : 'Hard',
-      className: 'border-red-100 bg-red-50 text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400',
-      activeClassName: 'border-red-500 bg-red-500 text-white shadow-sm dark:border-red-400 dark:bg-red-500 dark:text-white'
+      className: 'bg-stuck-soft text-stuck-ink',
+      activeClassName: 'bg-stuck text-white shadow-sm'
     },
     Unknown: {
       label: locale === 'zh-CN' ? '未知' : 'Unknown',
-      className: 'border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400',
-      activeClassName: 'border-neutral-500 bg-neutral-500 text-white shadow-sm dark:border-neutral-400 dark:bg-neutral-500 dark:text-white'
+      className: 'bg-surface-2 text-text-2',
+      activeClassName: 'bg-text-2 text-surface shadow-sm'
     }
   };
   return map[difficulty];
@@ -240,13 +240,13 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
   };
 
   return (
-    <section className={`${embedded ? 'mt-8' : 'mt-6'} rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#262626]`}>
+    <section className={`${embedded ? 'mt-8' : 'mt-6'} rounded-m border border-border-soft bg-surface p-6 shadow-sm`}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h2 className="text-lg font-black tracking-tight text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-lg font-semibold tracking-tight text-text">
             {locale === 'zh-CN' ? '完整题库' : 'Problem library'}
           </h2>
-          <p className="mt-1 text-xs font-medium text-neutral-500">
+          <p className="mt-1 text-xs font-medium text-text-2">
             {locale === 'zh-CN'
               ? `${Object.keys(state.problemsById).length} 道题，${noteCount} 篇笔记`
               : `${Object.keys(state.problemsById).length} problems, ${noteCount} notes`}
@@ -255,14 +255,14 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white transition hover:bg-black dark:bg-white dark:text-neutral-900"
+            className="rounded-sm bg-brand px-4 py-2 text-xs font-semibold text-white transition hover:-translate-y-0.5"
             onClick={exportLibraryCsv}
           >
             {locale === 'zh-CN' ? '导出 CSV' : 'Export CSV'}
           </button>
           <button
             type="button"
-            className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-black text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300"
+            className="rounded-sm border border-border bg-surface-2 px-4 py-2 text-xs font-semibold text-text-2 transition hover:bg-surface"
             onClick={exportLibraryJson}
           >
             {locale === 'zh-CN' ? '导出 JSON' : 'Export JSON'}
@@ -272,21 +272,21 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
 
       <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_auto]">
         <input
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
+          className="rounded-sm border border-border bg-surface px-4 py-3 text-sm text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-brand"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={locale === 'zh-CN' ? '搜索题目、标签、slug' : 'Search title, tags, slug'}
         />
         <div className="flex flex-col gap-2 xl:flex-row">
-          <div className="flex rounded-xl bg-neutral-100 p-1 dark:bg-neutral-900">
+          <div className="flex rounded-sm bg-surface-2 p-1">
             {difficultyOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                className={`whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-black transition ${
+                className={`whitespace-nowrap rounded-xs px-3 py-2 text-xs font-semibold transition ${
                   difficulty === option.value
                     ? difficultyMeta(option.value, locale).activeClassName
-                    : `${difficultyMeta(option.value, locale).className} hover:brightness-95 dark:hover:brightness-110`
+                    : `${difficultyMeta(option.value, locale).className} hover:brightness-95`
                 }`}
                 onClick={() => setDifficulty(option.value)}
               >
@@ -294,15 +294,15 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
               </button>
             ))}
           </div>
-          <div className="flex rounded-xl bg-neutral-100 p-1 dark:bg-neutral-900">
+          <div className="flex rounded-sm bg-surface-2 p-1">
             {noteOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black transition ${
+                className={`whitespace-nowrap rounded-xs px-3 py-2 text-xs font-semibold transition ${
                   noteFilter === option.value
-                    ? 'bg-white text-neutral-900 shadow-sm dark:bg-[#262626] dark:text-neutral-100'
-                    : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
+                    ? 'bg-surface text-text shadow-sm'
+                    : 'text-text-2 hover:text-text'
                 }`}
                 onClick={() => setNoteFilter(option.value)}
               >
@@ -313,14 +313,14 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
         </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto rounded-xl bg-neutral-100 p-1 dark:bg-neutral-900">
+      <div className="mt-3 overflow-x-auto rounded-sm bg-surface-2 p-1">
         <div className="flex min-w-max gap-1">
           <button
             type="button"
-            className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black transition ${
+            className={`whitespace-nowrap rounded-xs px-3 py-2 text-xs font-semibold transition ${
               tagFilter === 'all'
-                ? 'bg-white text-neutral-900 shadow-sm dark:bg-[#262626] dark:text-neutral-100'
-                : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
+                ? 'bg-surface text-text shadow-sm'
+                : 'text-text-2 hover:text-text'
             }`}
             onClick={() => setTagFilter('all')}
           >
@@ -330,10 +330,10 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
             <button
               key={tag}
               type="button"
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black transition ${
+              className={`whitespace-nowrap rounded-xs px-3 py-2 text-xs font-semibold transition ${
                 tagFilter === tag
-                  ? 'bg-white text-neutral-900 shadow-sm dark:bg-[#262626] dark:text-neutral-100'
-                  : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
+                  ? 'bg-surface text-text shadow-sm'
+                  : 'text-text-2 hover:text-text'
               }`}
               onClick={() => setTagFilter(tag)}
             >
@@ -345,10 +345,10 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-hidden rounded-m border border-border-soft">
           <div className="max-h-[560px] overflow-y-auto">
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+              <thead className="sticky top-0 bg-surface-2 text-[10px] uppercase tracking-wider text-text-2">
                 <tr>
                   <th className="px-4 py-3">{locale === 'zh-CN' ? '题目' : 'Problem'}</th>
                   <th className="px-4 py-3">{locale === 'zh-CN' ? '难度' : 'Difficulty'}</th>
@@ -357,26 +357,25 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                   <th className="px-4 py-3">{locale === 'zh-CN' ? '笔记' : 'Note'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              <tbody className="divide-y divide-border-soft">
                 {problems.map((problem) => {
                   const selected = problem.id === activeProblem?.id;
                   const tags = displayProblemTags(problem.tags, locale);
                   const strengthPercent = memoryStrengthPercent(problem);
-                  const isDanger = strengthPercent < 90;
                   const diff = difficultyMeta(problem.difficulty, locale);
                   return (
                     <tr
                       key={problem.id}
-                      className={`cursor-pointer transition ${selected ? 'bg-amber-50 dark:bg-amber-500/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/50'}`}
+                      className={`cursor-pointer transition ${selected ? 'bg-brand-soft' : 'hover:bg-surface-2'}`}
                       onClick={() => setActiveProblemId(problem.id)}
                     >
                       <td className="px-4 py-3">
-                        <div className="font-bold text-neutral-900 dark:text-neutral-100">{displayProblemTitle(problem, locale)}</div>
-                        <div className="mt-1 text-xs text-neutral-500">{problem.titleSlug}</div>
+                        <div className="font-semibold text-text">{displayProblemTitle(problem, locale)}</div>
+                        <div className="mt-1 text-xs text-text-2">{problem.titleSlug}</div>
                         {tags.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {tags.slice(0, 4).map((tag) => (
-                              <span key={`${problem.id}-${tag}`} className="rounded-md bg-neutral-100 px-1.5 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800">
+                              <span key={`${problem.id}-${tag}`} className="rounded-xs bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-text-2">
                                 {tag}
                               </span>
                             ))}
@@ -384,34 +383,34 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-tight ${diff.className}`}>
+                        <span className={`rounded-xs px-2 py-1 text-[10px] font-semibold uppercase tracking-tight ${diff.className}`}>
                           {diff.label}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="min-w-[120px]">
                           <div className="mb-1 flex items-center justify-between gap-2">
-                            <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight ${masteryClassName(problem.stability)}`}>
+                            <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-tight ${masteryClassName(problem.stability)}`}>
                               {masteryLabel(problem.stability, locale)}
                             </span>
-                            <span className={`text-[10px] font-black ${isDanger ? 'text-red-500' : 'text-emerald-500'}`}>
+                            <span className="text-[10px] font-semibold text-text-2">
                               {strengthPercent}%
                             </span>
                           </div>
-                          <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+                          <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
                             <div
-                              className={`h-full transition-all duration-500 ${isDanger ? 'bg-red-500' : 'bg-emerald-500'}`}
+                              className="h-full rounded-full bg-strength transition-all duration-500"
                               style={{ width: `${strengthPercent}%` }}
                             />
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-neutral-500">{problem.nextReviewAt.slice(0, 10)}</td>
+                      <td className="px-4 py-3 text-xs text-text-2">{problem.nextReviewAt.slice(0, 10)}</td>
                       <td className="px-4 py-3">
                         {state.notesByProblemId[problem.id]?.markdown?.trim() ? (
                           <button
                             type="button"
-                            className="rounded-lg bg-neutral-900 px-2.5 py-1.5 text-[10px] font-black text-white transition hover:bg-black dark:bg-white dark:text-neutral-900"
+                            className="rounded-xs bg-brand px-2.5 py-1.5 text-[10px] font-semibold text-white transition hover:-translate-y-0.5"
                             onClick={(event) => {
                               event.stopPropagation();
                               setActiveProblemId(problem.id);
@@ -423,7 +422,7 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                         ) : (
                           <button
                             type="button"
-                            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-neutral-600 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300"
+                            className="rounded-xs border border-border bg-surface px-2.5 py-1.5 text-[10px] font-semibold text-text-2 transition hover:bg-surface-2"
                             onClick={(event) => {
                               event.stopPropagation();
                               startEditingNote(problem);
@@ -438,7 +437,7 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                 })}
                 {problems.length === 0 && (
                   <tr>
-                    <td className="px-4 py-10 text-center text-sm font-bold text-neutral-400" colSpan={5}>
+                    <td className="px-4 py-10 text-center text-sm font-medium text-text-3" colSpan={5}>
                       {locale === 'zh-CN' ? '没有匹配题目' : 'No matching problems'}
                     </td>
                   </tr>
@@ -448,50 +447,50 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
           </div>
         </div>
 
-        <aside className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-950">
+        <aside className="rounded-m border border-border-soft bg-surface-2 p-5">
           {activeProblem ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${difficultyMeta(activeProblem.difficulty, locale).className}`}>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest ${difficultyMeta(activeProblem.difficulty, locale).className}`}>
                   {difficultyMeta(activeProblem.difficulty, locale).label}
                 </span>
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black ${masteryClassName(activeProblem.stability)}`}>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${masteryClassName(activeProblem.stability)}`}>
                   {masteryLabel(activeProblem.stability, locale)}
                 </span>
               </div>
-              <h3 className="mt-2 text-base font-black leading-snug text-neutral-900 dark:text-neutral-100">
+              <h3 className="mt-2 text-base font-semibold leading-snug text-text">
                 {displayProblemTitle(activeProblem, locale)}
               </h3>
-              <a href={activeProblem.url} target="_blank" rel="noreferrer" className="mt-2 block truncate text-xs font-bold text-amber-600">
+              <a href={activeProblem.url} target="_blank" rel="noreferrer" className="mt-2 block truncate text-xs font-semibold text-brand-strong">
                 {activeProblem.url}
               </a>
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-xl bg-white p-3 dark:bg-[#262626]">
-                  <div className="font-black text-neutral-900 dark:text-neutral-100">{activeProblem.reviewCount}</div>
-                  <div className="mt-1 text-neutral-500">{locale === 'zh-CN' ? '复习次数' : 'Reviews'}</div>
+                <div className="rounded-sm bg-surface p-3">
+                  <div className="font-semibold text-text">{activeProblem.reviewCount}</div>
+                  <div className="mt-1 text-text-2">{locale === 'zh-CN' ? '复习次数' : 'Reviews'}</div>
                 </div>
-                <div className="rounded-xl bg-white p-3 dark:bg-[#262626]">
-                  <div className="font-black text-neutral-900 dark:text-neutral-100">{activeProblem.currentIntervalDays}</div>
-                  <div className="mt-1 text-neutral-500">{locale === 'zh-CN' ? '间隔天数' : 'Interval days'}</div>
+                <div className="rounded-sm bg-surface p-3">
+                  <div className="font-semibold text-text">{activeProblem.currentIntervalDays}</div>
+                  <div className="mt-1 text-text-2">{locale === 'zh-CN' ? '间隔天数' : 'Interval days'}</div>
                 </div>
               </div>
-              <div className="mt-4 rounded-xl bg-white p-3 dark:bg-[#262626]">
-                <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-neutral-400">
+              <div className="mt-4 rounded-sm bg-surface p-3">
+                <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-text-3">
                   <span>{locale === 'zh-CN' ? '记忆强度' : 'Memory strength'}</span>
-                  <span className={activeStrengthDanger ? 'text-red-500' : 'text-emerald-500'}>
+                  <span className="text-text-2">
                     {activeStrengthPercent}%
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+                <div className="h-2 overflow-hidden rounded-full bg-surface-2">
                   <div
-                    className={`h-full transition-all duration-500 ${activeStrengthDanger ? 'bg-red-500' : 'bg-emerald-500'}`}
+                    className="h-full rounded-full bg-strength transition-all duration-500"
                     style={{ width: `${activeStrengthPercent}%` }}
                   />
                 </div>
               </div>
               <div className="mt-5">
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <div className="text-xs font-black text-neutral-900 dark:text-neutral-100">
+                  <div className="text-xs font-semibold text-text">
                     {editingNote
                       ? (locale === 'zh-CN' ? 'Markdown 笔记编辑' : 'Markdown note editor')
                       : (locale === 'zh-CN' ? 'Markdown 笔记预览' : 'Markdown note preview')}
@@ -501,7 +500,7 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                       <>
                         <button
                           type="button"
-                          className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-neutral-600 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-[#262626] dark:text-neutral-300"
+                          className="rounded-xs border border-border bg-surface px-2.5 py-1.5 text-[10px] font-semibold text-text-2 transition hover:bg-surface-2"
                           onClick={() => {
                             setNoteDraft(activeNote);
                             setEditingNote(false);
@@ -511,7 +510,7 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg bg-amber-500 px-2.5 py-1.5 text-[10px] font-black text-white transition hover:bg-amber-600 disabled:opacity-60 dark:text-neutral-950"
+                          className="rounded-xs bg-brand px-2.5 py-1.5 text-[10px] font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
                           disabled={savingNote}
                           onClick={saveActiveNote}
                         >
@@ -521,7 +520,7 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                     ) : (
                       <button
                         type="button"
-                        className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-neutral-600 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-[#262626] dark:text-neutral-300"
+                        className="rounded-xs border border-border bg-surface px-2.5 py-1.5 text-[10px] font-semibold text-text-2 transition hover:bg-surface-2"
                         onClick={() => startEditingNote(activeProblem)}
                       >
                         {locale === 'zh-CN' ? '编辑笔记' : 'Edit note'}
@@ -529,10 +528,10 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                     )}
                   </div>
                 </div>
-                <div className="max-h-[320px] overflow-y-auto rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-[#1a1a1a]">
+                <div className="max-h-[320px] overflow-y-auto rounded-sm border border-border bg-surface p-4">
                   {editingNote ? (
                     <textarea
-                      className="min-h-[260px] w-full resize-y border-none bg-transparent font-mono text-xs leading-relaxed text-neutral-800 outline-none dark:text-neutral-200"
+                      className="min-h-[260px] w-full resize-y border-none bg-transparent font-mono text-xs leading-relaxed text-text outline-none"
                       value={noteDraft}
                       onChange={(event) => setNoteDraft(event.target.value)}
                       placeholder={locale === 'zh-CN' ? '写下题解思路、复杂度、易错点...' : 'Write solution notes, complexity, pitfalls...'}
@@ -541,13 +540,13 @@ export function ProblemLibraryPanel({ state, locale, embedded = true, onChanged 
                   ) : activeNote.trim() ? (
                     <MarkdownPreview markdown={activeNote} />
                   ) : (
-                    <p className="text-sm font-medium text-neutral-400">
+                    <p className="text-sm font-medium text-text-3">
                       {locale === 'zh-CN' ? '这道题还没有笔记。' : 'No note for this problem yet.'}
                     </p>
                   )}
                 </div>
                 {noteMessage ? (
-                  <div className={`mt-2 text-xs font-bold ${noteMessage.includes('Failed') ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  <div className={`mt-2 text-xs font-semibold ${noteMessage.includes('Failed') ? 'text-danger' : 'text-easy-ink'}`}>
                     {noteMessage}
                   </div>
                 ) : null}
