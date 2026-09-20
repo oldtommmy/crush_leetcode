@@ -1,6 +1,6 @@
 {
   "name": "crush_leetcode",
-  "version": "0.0.4-beta.1",
+  "version": "0.0.5-beta",
   "private": true,
   "description": "A bilingual LeetCode spaced repetition Chrome extension.",
   "type": "module",
