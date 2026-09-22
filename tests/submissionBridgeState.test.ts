@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { containsAcceptedResultMutation } from '../src/content/acceptedObserver';
 import { createSubmissionBridgeState } from '../src/content/submissionBridgeState';
 
 const runCodeCheckUrl = 'https://leetcode.cn/submissions/detail/runcode_1779555533.520855_VTTFCzrmQJ/check/';
@@ -65,6 +66,59 @@ function createHarness() {
     state
   };
 }
+
+class FakeElement {
+  readonly nodeType = 1;
+  parentElement: FakeElement | null = null;
+
+  constructor(
+    readonly textContent: string,
+    private readonly resultContainer = false,
+    private readonly nestedResult?: FakeElement
+  ) {
+    if (nestedResult) nestedResult.parentElement = this;
+  }
+
+  matches(): boolean {
+    return this.resultContainer;
+  }
+
+  closest(): FakeElement | null {
+    let current: FakeElement | null = this;
+    while (current) {
+      if (current.resultContainer) return current;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  querySelector(): FakeElement | null {
+    return this.nestedResult ?? null;
+  }
+}
+
+function mutation(target: FakeElement, addedNodes: FakeElement[]): MutationRecord {
+  return { target, addedNodes } as unknown as MutationRecord;
+}
+
+describe('accepted DOM fallback', () => {
+  it('does not rediscover stale Accepted text after an unrelated DOM mutation', () => {
+    const staleResult = new FakeElement('Accepted', true);
+    const body = new FakeElement('Accepted elsewhere', false, staleResult);
+    const unrelated = new FakeElement('editor changed');
+    unrelated.parentElement = body;
+
+    expect(containsAcceptedResultMutation([mutation(body, [unrelated])])).toBe(false);
+  });
+
+  it('detects Accepted text in a newly added bounded result container', () => {
+    const body = new FakeElement('');
+    const newResult = new FakeElement('Accepted', true);
+    newResult.parentElement = body;
+
+    expect(containsAcceptedResultMutation([mutation(body, [newResult])])).toBe(true);
+  });
+});
 
 describe('submission bridge state simulated E2E', () => {
   it('does not emit an accepted event for Run even when runcode check returns Accepted', () => {

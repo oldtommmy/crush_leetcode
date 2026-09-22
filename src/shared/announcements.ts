@@ -2,6 +2,13 @@ import type { AnnouncementAction, AnnouncementSeverity, ExtensionAnnouncement, L
 
 const DEFAULT_SEVERITY: AnnouncementSeverity = 'info';
 const SUPPORTED_SEVERITIES = new Set(['info', 'success', 'warning', 'critical']);
+const TRUSTED_DOWNLOAD_HOSTS = new Set([
+  'github.com',
+  'objects.githubusercontent.com',
+  'raw.githubusercontent.com',
+  'crushlc.site',
+  'mail.crushlc.site'
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -19,9 +26,18 @@ function normalizeUrl(value: unknown): string | undefined {
 
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : undefined;
+    return url.protocol === 'https:' ? url.toString() : undefined;
   } catch {
     return undefined;
+  }
+}
+
+export function isTrustedAnnouncementDownloadUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && TRUSTED_DOWNLOAD_HOSTS.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
   }
 }
 
@@ -30,11 +46,13 @@ function normalizeAction(value: unknown): AnnouncementAction | undefined {
 
   const url = normalizeUrl(value.url);
   if (!url) return undefined;
+  const download = value.download === true;
+  if (download && !isTrustedAnnouncementDownloadUrl(url)) return undefined;
 
   return {
     label: value.label,
     url,
-    download: value.download === true
+    download
   };
 }
 

@@ -12,6 +12,9 @@ declare global {
 }
 
 const ACCEPTED_MESSAGE_TYPE = 'QUIZ_RECALL_ACCEPTED_SUBMISSION';
+const NAVIGATION_MESSAGE_TYPE = 'QUIZ_RECALL_NAVIGATION';
+const BRIDGE_CHANNEL = 'crush-leetcode-page-bridge-v1';
+const HISTORY_PATCHED_FLAG = '__crushLeetcodeMainHistoryPatched__';
 const SUBMIT_PATTERNS = [/^Submit$/i, /^提交(?:代码)?$/];
 const RUN_PATTERNS = [/^Run$/i, /^运行(?:代码)?$/];
 const activeCheckProbeIds = new Set<string>();
@@ -21,7 +24,56 @@ const bridgeState = createSubmissionBridgeState({
 });
 
 function notifyAccepted(pathname?: string) {
-  window.postMessage({ type: ACCEPTED_MESSAGE_TYPE, pathname }, window.location.origin);
+  window.postMessage({ channel: BRIDGE_CHANNEL, type: ACCEPTED_MESSAGE_TYPE, pathname }, window.location.origin);
+}
+
+function notifyNavigation() {
+  window.postMessage(
+    { channel: BRIDGE_CHANNEL, type: NAVIGATION_MESSAGE_TYPE, pathname: window.location.pathname },
+    window.location.origin
+  );
+}
+
+export function installHistoryBridge() {
+  const target = history as History & Record<string, unknown>;
+  if (target[HISTORY_PATCHED_FLAG]) {
+    return;
+  }
+  target[HISTORY_PATCHED_FLAG] = true;
+
+  for (const method of ['pushState', 'replaceState'] as const) {
+    const original = history[method];
+    history[method] = function patched(this: History, ...args: Parameters<History[typeof method]>) {
+      const previousPathname = window.location.pathname;
+      const result = original.apply(this, args);
+      if (window.location.pathname !== previousPathname) {
+        notifyNavigation();
+      }
+      return result;
+    } as History[typeof method];
+  }
+}
+
+export function readXhrResponse(xhr: Pick<XMLHttpRequest, 'responseType' | 'response' | 'responseText'>): unknown {
+  if (xhr.responseType === 'json') {
+    return xhr.response;
+  }
+  if (xhr.responseType !== '' && xhr.responseType !== 'text') {
+    return undefined;
+  }
+
+  let responseText: string;
+  try {
+    responseText = xhr.responseText;
+  } catch {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return responseText;
+  }
 }
 
 function parseRequestPayload(body: unknown): unknown {
@@ -153,6 +205,7 @@ function installBridge() {
     return;
   }
   window.__quizRecallBridgeInstalled = true;
+  installHistoryBridge();
   document.addEventListener('pointerdown', handleActionPointer, true);
   document.addEventListener('click', handleActionPointer, true);
 
@@ -193,14 +246,15 @@ function installBridge() {
         return;
       }
       const requestPayload = parseRequestPayload(body);
-      try {
-        inspect(url, JSON.parse(this.responseText), requestPayload);
-      } catch {
-        inspect(url, this.responseText, requestPayload);
+      const payload = readXhrResponse(this);
+      if (payload !== undefined) {
+        inspect(url, payload, requestPayload);
       }
     });
     return (originalSend as unknown as (...args: unknown[]) => void).apply(this, arguments as unknown as unknown[]);
   };
 }
 
-installBridge();
+if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof XMLHttpRequest !== 'undefined') {
+  installBridge();
+}

@@ -31,6 +31,22 @@ describe('announcements', () => {
     expect(localizeText(announcement?.title, 'zh-CN')).toBe('有新版本了');
   });
 
+  it('rejects insecure actions and untrusted downloads', () => {
+    expect(normalizeAnnouncement({
+      noticeId: 'insecure',
+      latestVersion: '1.0.0',
+      title: 'Insecure',
+      actions: [{ label: 'Open', url: 'http://example.com/release' }]
+    })).toBeUndefined();
+
+    expect(normalizeAnnouncement({
+      noticeId: 'download',
+      latestVersion: '1.0.0',
+      title: 'Download',
+      actions: [{ label: 'Download', url: 'https://example.com/release.zip', download: true }]
+    })).toBeUndefined();
+  });
+
   it('hides dismissed or already installed announcements', () => {
     const announcement = normalizeAnnouncement({
       noticeId: 'release-0.0.3',

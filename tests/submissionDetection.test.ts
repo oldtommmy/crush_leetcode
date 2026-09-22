@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readXhrResponse } from '../src/content/pageBridgeInjected';
 import {
   containsKnownSubmittedId,
   containsAccepted,
@@ -14,6 +15,51 @@ import {
   isSubmissionCheckUrl,
   shouldInspectUrl
 } from '../src/content/submissionDetection';
+
+describe('XHR response handling', () => {
+  it('uses parsed response directly for json responseType', () => {
+    const response = { status_msg: 'Accepted' };
+    const xhr = {
+      response,
+      responseType: 'json',
+      get responseText(): string {
+        throw new Error('responseText is invalid for json responses');
+      }
+    } as Pick<XMLHttpRequest, 'responseType' | 'response' | 'responseText'>;
+
+    expect(readXhrResponse(xhr)).toBe(response);
+  });
+
+  it('reads responseText at most once and safely ignores an invalid getter', () => {
+    let reads = 0;
+    const xhr = {
+      response: null,
+      responseType: '',
+      get responseText(): string {
+        reads += 1;
+        throw new Error('InvalidStateError');
+      }
+    } as Pick<XMLHttpRequest, 'responseType' | 'response' | 'responseText'>;
+
+    expect(readXhrResponse(xhr)).toBeUndefined();
+    expect(reads).toBe(1);
+  });
+
+  it('parses textual json without re-reading responseText', () => {
+    let reads = 0;
+    const xhr = {
+      response: null,
+      responseType: 'text',
+      get responseText(): string {
+        reads += 1;
+        return '{"status_msg":"Accepted"}';
+      }
+    } as Pick<XMLHttpRequest, 'responseType' | 'response' | 'responseText'>;
+
+    expect(readXhrResponse(xhr)).toEqual({ status_msg: 'Accepted' });
+    expect(reads).toBe(1);
+  });
+});
 
 describe('submission detection', () => {
   it('detects official submit and check URLs only', () => {

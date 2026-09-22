@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { sanitizeMarkdown } from '../../shared/markdown/sanitize';
 import { problemIdFor } from '../../shared/review/scheduler';
-import type { ExtensionStorageState, Locale, PetSize, ProblemIdentity, RuntimeRequest, RuntimeResponse } from '../../shared/types';
+import type { Locale, PetSize, ProblemIdentity, ProblemNote, RuntimeRequest, RuntimeResponse } from '../../shared/types';
 import { DEFAULT_PET_SIZE, PET_SIZE_PIXELS, STORAGE_KEY } from '../../shared/constants';
 import { t } from '../../shared/i18n/messages';
 import { displayProblemTitle } from '../../shared/leetcode/display';
@@ -108,10 +108,13 @@ export function FloatingNotePanel({ identity, locale, onRate }: FloatingNotePane
 
   useEffect(() => {
     chrome.runtime
-      .sendMessage({ type: 'GET_DAILY_PLAN' } satisfies RuntimeRequest)
-      .then((response: RuntimeResponse<{ state: ExtensionStorageState }>) => {
+      .sendMessage({
+        type: 'GET_PROBLEM_NOTE',
+        payload: { problemId }
+      } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse<ProblemNote | undefined>) => {
         if (response.ok) {
-          const existingMarkdown = response.data?.state.notesByProblemId[problemId]?.markdown ?? '';
+          const existingMarkdown = response.data?.markdown ?? '';
           setMarkdown(existingMarkdown);
           setPreview(existingMarkdown.trim().length > 0);
         }

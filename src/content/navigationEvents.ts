@@ -1,16 +1,16 @@
 /**
- * SPA navigation events without polling (C1).
- *
- * LeetCode is a single-page app: it swaps problems via `history.pushState` /
- * `replaceState`, which do NOT fire `popstate`. The content script used to work
- * around this by polling `detectCurrentProblem()` every 1.5s, scanning the whole
- * document each time. Instead we patch the history methods once to emit a
- * synthetic `locationchange` event and also listen for real `popstate`, so
- * identity refreshes are event-driven.
+ * SPA navigation events without polling. The page-world bridge emits this event
+ * after validated pushState/replaceState messages cross the isolated-world
+ * boundary. The local patch remains as a best-effort fallback for test and page
+ * environments where both worlds share the History object.
  */
-
-const LOCATION_CHANGE_EVENT = 'crush-leetcode:locationchange';
+export const LOCATION_CHANGE_EVENT = 'crush-leetcode:locationchange';
 const PATCHED_FLAG = '__crushLeetcodeHistoryPatched__';
+const DEFAULT_RETRY_DELAYS_MS = [250, 750, 1500] as const;
+
+export interface LocationChangeOptions {
+  retryDelaysMs?: readonly number[];
+}
 
 function patchHistoryOnce(): void {
   const target = history as History & Record<string, unknown>;
@@ -24,35 +24,56 @@ function patchHistoryOnce(): void {
   for (const method of ['pushState', 'replaceState'] as const) {
     const original = history[method];
     history[method] = function patched(this: History, ...args: Parameters<History[typeof method]>) {
+      const previousPathname = window.location.pathname;
       const result = original.apply(this, args);
-      emit();
+      if (window.location.pathname !== previousPathname) {
+        emit();
+      }
       return result;
     } as History[typeof method];
   }
 }
 
 /**
- * Subscribe to SPA + browser navigation. `onChange` fires only when the URL's
- * pathname actually changes, so repeated same-page state pushes don't churn.
- * Returns an unsubscribe function.
+ * Subscribe to SPA + browser navigation. A real pathname change fires
+ * immediately, followed by a small bounded set of hydration retries. Repeated
+ * same-page state pushes do not fire. Returns an unsubscribe function.
  */
-export function onLocationChange(onChange: () => void): () => void {
+export function onLocationChange(onChange: () => void, options: LocationChangeOptions = {}): () => void {
   patchHistoryOnce();
 
+  const retryDelaysMs = options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
   let lastPathname = window.location.pathname;
+  let retryTimers: Array<ReturnType<typeof setTimeout>> = [];
+
+  const clearRetries = () => {
+    retryTimers.forEach((timer) => clearTimeout(timer));
+    retryTimers = [];
+  };
+
   const handler = () => {
     const nextPathname = window.location.pathname;
     if (nextPathname === lastPathname) {
       return;
     }
     lastPathname = nextPathname;
+    clearRetries();
     onChange();
+
+    retryTimers = retryDelaysMs.map((delay) =>
+      setTimeout(() => {
+        if (window.location.pathname === nextPathname) {
+          onChange();
+        }
+      }, delay)
+    );
   };
 
   window.addEventListener('popstate', handler);
   window.addEventListener(LOCATION_CHANGE_EVENT, handler);
 
   return () => {
+    clearRetries();
     window.removeEventListener('popstate', handler);
     window.removeEventListener(LOCATION_CHANGE_EVENT, handler);
   };

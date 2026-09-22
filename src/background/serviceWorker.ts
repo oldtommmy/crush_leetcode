@@ -1,16 +1,23 @@
-import { isDailyAlarm, scheduleDailyAlarm } from './alarms';
+import {
+  isDailyAlarm,
+  isSecureSyncAlarm,
+  scheduleDailyAlarm,
+  scheduleSecureSyncAlarm
+} from './alarms';
 import { sendWeeklySummaryEmail } from './emailWebhook';
 import { notifyDailyPlan, notifyTest, notifyWeeklyReportExported } from './notifications';
 import { exportWeeklyReportHtml } from './weeklyReportExport';
 import { getHotQuestionsRuntimeData, updateHotQuestionCompany } from './hotQuestions';
+import { getCachedJson } from './remoteJsonCache';
+import { createSingleFlight } from './singleFlight';
+import { secureAutoSyncScheduler, shouldScheduleSecureAutoSync } from '../shared/sync/autoSync';
 import { todayDateString } from '../shared/date';
 import { applyReview } from '../shared/review/scheduler';
-import { normalizeAnnouncement, shouldShowAnnouncement } from '../shared/announcements';
+import { isTrustedAnnouncementDownloadUrl, normalizeAnnouncement, shouldShowAnnouncement } from '../shared/announcements';
 import { normalizeDailyCompletionMessages } from '../shared/dailyCompletionMessages';
 import {
   selectDailyRemainingProblems,
   selectDueProblems,
-  selectReviewStats,
   selectTodayCompletedProblems,
   selectWeeklySummaryStats
 } from '../shared/review/selectors';
@@ -31,13 +38,27 @@ import {
   setState,
   updateState
 } from '../shared/storage/chromeStorage';
-import type { AnnouncementAction, DueProblem, ReviewLog, RuntimeRequest, RuntimeResponse } from '../shared/types';
+import type { AnnouncementAction, DueProblem, RuntimeRequest, RuntimeResponse } from '../shared/types';
 import {
   ANNOUNCEMENTS_URL,
   DAILY_COMPLETION_MESSAGES_URL,
   MAX_DAILY_REVIEW_LIMIT,
-  MIN_DAILY_REVIEW_LIMIT
+  MIN_DAILY_REVIEW_LIMIT,
+  STORAGE_KEY
 } from '../shared/constants';
+import {
+  buildContentSettingsData,
+  buildPopupDailyPlanData,
+  buildProblemNoteData,
+  buildProblemReviewContextData,
+  isValidProblemId,
+  normalizeSafeLeetCodeUrl,
+  reminderScheduleChanged
+} from './runtimeData';
+
+const ANNOUNCEMENT_CACHE_KEY = 'quizRecallRemoteAnnouncement';
+const DAILY_COMPLETION_CACHE_KEY = 'quizRecallRemoteDailyCompletion';
+const REMOTE_CONFIG_TTL_MS = 5 * 60 * 1000;
 
 let reviewWriteQueue: Promise<unknown> = Promise.resolve();
 
@@ -49,13 +70,34 @@ function normalizeDailyReviewLimitInput(value: unknown): number {
   return Math.min(MAX_DAILY_REVIEW_LIMIT, Math.max(MIN_DAILY_REVIEW_LIMIT, Math.round(value)));
 }
 
+function requestPayload(request: RuntimeRequest): Record<string, unknown> | undefined {
+  const payload = (request as { payload?: unknown }).payload;
+  return typeof payload === 'object' && payload !== null ? payload as Record<string, unknown> : undefined;
+}
+
+function requireProblemId(request: RuntimeRequest): string {
+  const problemId = requestPayload(request)?.problemId;
+  if (!isValidProblemId(problemId)) {
+    throw new Error('Invalid problemId payload.');
+  }
+  return problemId;
+}
+
+function requireSafeLeetCodeUrl(request: RuntimeRequest): string {
+  const url = normalizeSafeLeetCodeUrl(requestPayload(request)?.url);
+  if (!url) {
+    throw new Error('Unsupported URL.');
+  }
+  return url;
+}
+
 function enqueueReviewWrite<T>(task: () => Promise<T>): Promise<T> {
   const next = reviewWriteQueue.then(task, task);
   reviewWriteQueue = next.catch(() => undefined);
   return next;
 }
 
-async function runReminderCheck(): Promise<DueProblem[]> {
+async function performReminderCheck(): Promise<DueProblem[]> {
   const state = await getState();
   const now = new Date();
   const today = todayDateString(now);
@@ -141,6 +183,8 @@ async function runReminderCheck(): Promise<DueProblem[]> {
   return dueProblems;
 }
 
+const runReminderCheck = createSingleFlight(performReminderCheck);
+
 async function exportWeeklyReport(): Promise<{ filename: string; downloadId: number }> {
   const state = await getState();
   const now = new Date();
@@ -221,18 +265,13 @@ function currentExtensionVersion(): string {
 
 async function checkAnnouncement() {
   const state = await getState();
-  const response = await fetch(ANNOUNCEMENTS_URL, {
-    cache: 'no-store',
-    headers: {
-      accept: 'application/json'
-    }
+  const cached = await getCachedJson({
+    cacheKey: ANNOUNCEMENT_CACHE_KEY,
+    url: ANNOUNCEMENTS_URL,
+    ttlMs: REMOTE_CONFIG_TTL_MS,
+    normalize: (input) => ({ announcement: normalizeAnnouncement(input) })
   });
-
-  if (!response.ok) {
-    throw new Error(`Announcement request failed: ${response.status}`);
-  }
-
-  const announcement = normalizeAnnouncement(await response.json());
+  const announcement = cached.announcement;
   if (!announcement) return undefined;
 
   return shouldShowAnnouncement(
@@ -245,18 +284,12 @@ async function checkAnnouncement() {
 }
 
 async function getDailyCompletionMessages() {
-  const response = await fetch(DAILY_COMPLETION_MESSAGES_URL, {
-    cache: 'no-store',
-    headers: {
-      accept: 'application/json'
-    }
+  return getCachedJson({
+    cacheKey: DAILY_COMPLETION_CACHE_KEY,
+    url: DAILY_COMPLETION_MESSAGES_URL,
+    ttlMs: REMOTE_CONFIG_TTL_MS,
+    normalize: normalizeDailyCompletionMessages
   });
-
-  if (!response.ok) {
-    throw new Error(`Daily completion messages request failed: ${response.status}`);
-  }
-
-  return normalizeDailyCompletionMessages(await response.json());
 }
 
 async function dismissAnnouncement(noticeId: string) {
@@ -276,11 +309,14 @@ async function dismissAnnouncement(noticeId: string) {
 
 async function openAnnouncementAction(action: AnnouncementAction) {
   const url = new URL(action.url);
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+  if (url.protocol !== 'https:') {
     throw new Error('Unsupported announcement URL.');
   }
 
   if (action.download) {
+    if (!isTrustedAnnouncementDownloadUrl(url.toString())) {
+      throw new Error('Untrusted announcement download URL.');
+    }
     await chrome.downloads.download({
       url: url.toString()
     });
@@ -292,7 +328,7 @@ async function openAnnouncementAction(action: AnnouncementAction) {
 
 async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> {
   if (request.type === 'UPSERT_ACCEPTED_REVIEW') {
-    const nextState = await enqueueReviewWrite(() => updateState((state) => {
+    await enqueueReviewWrite(() => updateState((state) => {
       const problemId = `${request.payload.identity.platform}:${request.payload.identity.titleSlug}`;
       
       // Find last log for this problem to support same-day rollback
@@ -324,7 +360,7 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
       };
     }));
 
-    return { ok: true, data: nextState };
+    return { ok: true };
   }
 
   if (request.type === 'CHECK_ANNOUNCEMENT') {
@@ -355,34 +391,22 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
     return { ok: true };
   }
 
-  if (request.type === 'GET_DAILY_PLAN') {
-    const state = await getState();
-    const totalDailyRemainingProblems = selectDailyRemainingProblems(state);
-    const completedTodayProblems = selectTodayCompletedProblems(state);
-    const remainingGoalSlots = Math.max(0, state.settings.dailyReviewLimit - completedTodayProblems.length);
-    
-    // Create a map of problemId -> lastLog for UI preview rollback support
-    const lastLogsByProblemId: Record<string, ReviewLog> = {};
-    Object.values(state.reviewLogsById).forEach(log => {
-      const existing = lastLogsByProblemId[log.problemId];
-      if (!existing || log.reviewedAt > existing.reviewedAt) {
-        lastLogsByProblemId[log.problemId] = log;
-      }
-    });
+  if (request.type === 'GET_POPUP_DAILY_PLAN') {
+    return { ok: true, data: buildPopupDailyPlanData(await getState()) };
+  }
 
-    return {
-      ok: true,
-      data: {
-        state,
-        dueProblems: selectDueProblems(state),
-        dailyRemainingProblems: totalDailyRemainingProblems.slice(0, remainingGoalSlots),
-        totalDailyRemainingCount: totalDailyRemainingProblems.length,
-        completedTodayProblems,
-        allProblems: Object.values(state.problemsById).filter(p => !p.archived).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-        stats: selectReviewStats(state),
-        lastLogsByProblemId
-      }
-    };
+  if (request.type === 'GET_CONTENT_SETTINGS') {
+    return { ok: true, data: buildContentSettingsData(await getState()) };
+  }
+
+  if (request.type === 'GET_PROBLEM_REVIEW_CONTEXT') {
+    const problemId = requireProblemId(request);
+    return { ok: true, data: buildProblemReviewContextData(await getState(), problemId) };
+  }
+
+  if (request.type === 'GET_PROBLEM_NOTE') {
+    const problemId = requireProblemId(request);
+    return { ok: true, data: buildProblemNoteData(await getState(), problemId) };
   }
 
   if (request.type === 'GET_HOT_QUESTIONS') {
@@ -402,23 +426,27 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
 
   if (request.type === 'UPDATE_DAILY_REVIEW_LIMIT') {
     const limit = normalizeDailyReviewLimitInput(request.payload.limit);
-    const nextState = await updateState((state) => ({
+    await updateState((state) => ({
       ...state,
       settings: {
         ...state.settings,
         dailyReviewLimit: limit
       }
     }));
-    return { ok: true, data: nextState };
+    return { ok: true, data: { dailyReviewLimit: limit } };
   }
 
   if (request.type === 'SAVE_NOTE') {
-    const note = await saveNote(request.payload.problemId, request.payload.markdown);
+    const problemId = requireProblemId(request);
+    if (typeof requestPayload(request)?.markdown !== 'string') {
+      throw new Error('Invalid note payload.');
+    }
+    const note = await saveNote(problemId, request.payload.markdown);
     return { ok: true, data: note };
   }
 
   if (request.type === 'OPEN_PROBLEM' || request.type === 'OPEN_URL') {
-    await chrome.tabs.create({ url: request.payload.url });
+    await chrome.tabs.create({ url: requireSafeLeetCodeUrl(request) });
     return { ok: true };
   }
 
@@ -447,13 +475,13 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
 
   if (request.type === 'IMPORT_STATE_CONFIRMED') {
     const state = await importState(request.payload.input);
-    await scheduleDailyAlarm(state.settings);
     return { ok: true, data: state };
   }
 
   if (request.type === 'RESET_TO_TODAY') {
-    const nextState = await updateState((state) => {
-      const problem = state.problemsById[request.payload.problemId];
+    const problemId = requireProblemId(request);
+    await updateState((state) => {
+      const problem = state.problemsById[problemId];
       if (!problem) return state;
 
       return {
@@ -469,12 +497,13 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
         }
       };
     });
-    return { ok: true, data: nextState };
+    return { ok: true };
   }
 
   if (request.type === 'ARCHIVE_PROBLEM') {
-    const nextState = await updateState((state) => {
-      const problem = state.problemsById[request.payload.problemId];
+    const problemId = requireProblemId(request);
+    await updateState((state) => {
+      const problem = state.problemsById[problemId];
       if (!problem) return state;
       return {
         ...state,
@@ -488,11 +517,43 @@ async function handleMessage(request: RuntimeRequest): Promise<RuntimeResponse> 
         }
       };
     });
-    return { ok: true, data: nextState };
+    return { ok: true };
   }
 
   return { ok: false, error: 'Unknown request.' };
 }
+
+let reminderAlarmRescheduleQueue: Promise<void> = Promise.resolve();
+
+function rescheduleDailyAlarmFromLatestState(): void {
+  reminderAlarmRescheduleQueue = reminderAlarmRescheduleQueue
+    .catch(() => undefined)
+    .then(async () => {
+      const state = await getState();
+      await scheduleDailyAlarm(state.settings);
+    });
+  reminderAlarmRescheduleQueue.catch(console.error);
+}
+
+async function runSecureSyncAlarm(): Promise<void> {
+  const state = await getState();
+  const config = state.settings.cloudSync;
+  if (!config.enabled || !config.recoveryCode || config.status === 'conflict') return;
+  secureAutoSyncScheduler.resume();
+  secureAutoSyncScheduler.schedule(state);
+  await secureAutoSyncScheduler.flush();
+}
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  const stateChange = changes[STORAGE_KEY];
+  if (areaName !== 'local' || !stateChange) return;
+  if (reminderScheduleChanged(stateChange.oldValue, stateChange.newValue)) {
+    rescheduleDailyAlarmFromLatestState();
+  }
+  if (shouldScheduleSecureAutoSync(stateChange.oldValue, stateChange.newValue)) {
+    scheduleSecureSyncAlarm();
+  }
+});
 
 chrome.runtime.onInstalled.addListener(() => {
   getState()
@@ -503,7 +564,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   getState()
     .then((state) => {
-      scheduleDailyAlarm(state.settings);
+      scheduleDailyAlarm(state.settings).catch(console.error);
       // 启动时检查是否需要补发周报
       runReminderCheck().catch(console.error);
     })
@@ -512,7 +573,18 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (isDailyAlarm(alarm.name)) {
-    runReminderCheck().catch(console.error);
+    getState()
+      .then(async (state) => {
+        await scheduleDailyAlarm(state.settings);
+        await runReminderCheck();
+      })
+      .catch(console.error);
+    return;
+  }
+  if (isSecureSyncAlarm(alarm.name)) {
+    runSecureSyncAlarm().catch(() => {
+      console.warn('Crush LeetCode secure sync alarm failed.');
+    });
   }
 });
 

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { scheduleDailyAlarm } from '../src/background/alarms';
-import { DAILY_ALARM_NAME, DEFAULT_SETTINGS } from '../src/shared/constants';
+import { cancelSecureSyncAlarm, scheduleDailyAlarm, scheduleSecureSyncAlarm } from '../src/background/alarms';
+import { DAILY_ALARM_NAME, DEFAULT_SETTINGS, SECURE_SYNC_ALARM_NAME } from '../src/shared/constants';
+import { AUTO_SYNC_DEBOUNCE_MS } from '../src/shared/sync/autoSync';
 
 describe('daily review alarms', () => {
   const clear = vi.fn();
@@ -36,8 +37,7 @@ describe('daily review alarms', () => {
 
     expect(clear).toHaveBeenCalledWith(DAILY_ALARM_NAME);
     expect(create).toHaveBeenCalledWith(DAILY_ALARM_NAME, {
-      when: new Date(2026, 3, 21, 9, 30, 0, 0).getTime(),
-      periodInMinutes: 24 * 60
+      when: new Date(2026, 3, 21, 9, 30, 0, 0).getTime()
     });
   });
 
@@ -51,8 +51,20 @@ describe('daily review alarms', () => {
     });
 
     expect(create).toHaveBeenCalledWith(DAILY_ALARM_NAME, {
-      when: new Date(2026, 3, 21, 10, 0, 0, 0).getTime(),
-      periodInMinutes: 24 * 60
+      when: new Date(2026, 3, 21, 10, 0, 0, 0).getTime()
     });
+  });
+
+  it('uses a durable one-shot alarm for the secure sync debounce', () => {
+    const now = Date.now();
+    scheduleSecureSyncAlarm(now);
+    expect(create).toHaveBeenCalledWith(SECURE_SYNC_ALARM_NAME, {
+      when: now + AUTO_SYNC_DEBOUNCE_MS
+    });
+  });
+
+  it('cancels a pending secure sync alarm before manual sync', async () => {
+    await cancelSecureSyncAlarm();
+    expect(clear).toHaveBeenCalledWith(SECURE_SYNC_ALARM_NAME);
   });
 });

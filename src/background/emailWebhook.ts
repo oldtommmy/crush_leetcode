@@ -131,26 +131,29 @@ function normalizeBetaAccessCode(code?: string): string {
 }
 
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<void> {
-  console.log(`[EmailWebhook] Posting to ${url}...`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: controller.signal
     });
 
     if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      console.error(`[EmailWebhook] Server returned ${response.status}: ${text}`);
-      throw new Error(`Email webhook failed: ${response.status} ${text}`.trim());
+      throw new Error(`Email webhook failed: ${response.status}`);
     }
-    console.log('[EmailWebhook] Successfully sent.');
   } catch (error) {
-    console.error('[EmailWebhook] Fetch error:', error);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Email webhook timed out.');
+    }
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       throw new Error('Network error or CORS block: Failed to fetch. Please check your internet connection and verify the mailer service is up.');
     }
     throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

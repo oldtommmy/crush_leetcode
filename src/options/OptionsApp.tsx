@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { DAILY_ALARM_NAME, PET_SIZE_PIXELS } from '../shared/constants';
-import { nextLocalTime } from '../shared/date';
+import { PET_SIZE_PIXELS } from '../shared/constants';
+import { cancelSecureSyncAlarm } from '../background/alarms';
 import {
   applyDebugScenarioPreset,
   DEBUG_SCENARIO_PRESETS,
+  DEBUG_TOOLS_ENABLED,
   getState,
   importState,
   loadDebugQaCoveragePack,
@@ -24,18 +25,10 @@ import { ImportExportPanel } from './components/ImportExportPanel';
 import { InstallationCheck } from './components/InstallationCheck';
 import { t } from '../shared/i18n/messages';
 import { AnnouncementBanner } from '../shared/ui/AnnouncementBanner';
+import { buildBackupExport } from '../shared/storage/backup';
 
 const DEBUG_TAP_TARGET = 7;
 const DEBUG_TAP_WINDOW_MS = 2000;
-
-async function scheduleAlarm(settings: UserSettings) {
-  await chrome.alarms.clear(DAILY_ALARM_NAME);
-  if (!settings.reminders.enabled) return;
-  chrome.alarms.create(DAILY_ALARM_NAME, {
-    when: nextLocalTime(settings.reminders.dailyReminderTime).getTime(),
-    periodInMinutes: 24 * 60
-  });
-}
 
 export function OptionsApp() {
   const [state, setLoadedState] = useState<ExtensionStorageState | undefined>();
@@ -82,15 +75,14 @@ export function OptionsApp() {
       settings
     }));
     setLoadedState(nextState);
-    await scheduleAlarm(settings);
     setMessage({ text: 'Settings saved', type: 'success' });
   };
 
   const runImport = async (input: unknown) => {
     try {
       const nextState = await importState(input);
+      await cancelSecureSyncAlarm();
       setLoadedState(nextState);
-      await scheduleAlarm(nextState.settings);
       setMessage({ text: 'Data imported successfully', type: 'success' });
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : String(error), type: 'error' });
@@ -162,8 +154,27 @@ export function OptionsApp() {
     chrome.tabs.create({ url: chrome.runtime.getURL('library.html') });
   };
 
+  const downloadDebugBackup = (currentState: ExtensionStorageState) => {
+    const blob = new Blob([JSON.stringify(buildBackupExport(currentState), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `crush-leetcode-before-debug-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const confirmDebugReplacement = () => {
+    if (!state) return false;
+    const confirmed = window.confirm(state.settings.locale === 'zh-CN'
+      ? '此操作会替换本地题目、笔记和复习记录。继续前将自动下载安全备份。是否继续？'
+      : 'This replaces local problems, notes, and review logs. A safe backup will download first. Continue?');
+    if (confirmed) downloadDebugBackup(state);
+    return confirmed;
+  };
+
   const toggleDebugMode = async () => {
-    if (!state) return;
+    if (!DEBUG_TOOLS_ENABLED || !state) return;
     const nextState = await updateState((latestState) => ({
       ...latestState,
       metadata: {
@@ -176,6 +187,7 @@ export function OptionsApp() {
   };
 
   const handleLogoClick = () => {
+    if (!DEBUG_TOOLS_ENABLED) return;
     const nextTapCount = logoTapCount + 1;
     if (nextTapCount >= DEBUG_TAP_TARGET) {
       setLogoTapCount(0);
@@ -187,8 +199,10 @@ export function OptionsApp() {
   };
 
   const loadDemoData = async () => {
+    if (!DEBUG_TOOLS_ENABLED || !confirmDebugReplacement()) return;
     try {
       const nextState = await loadDebugQaCoveragePack();
+      await cancelSecureSyncAlarm();
       setLoadedState(nextState);
       setMessage({ text: 'QA coverage pack loaded', type: 'success' });
     } catch (error) {
@@ -197,8 +211,10 @@ export function OptionsApp() {
   };
 
   const applyScenario = async (preset: DebugScenarioPreset) => {
+    if (!DEBUG_TOOLS_ENABLED || !confirmDebugReplacement()) return;
     try {
       const nextState = await applyDebugScenarioPreset(preset);
+      await cancelSecureSyncAlarm();
       setLoadedState(nextState);
       setMessage({ text: `Debug preset applied: ${preset}`, type: 'success' });
     } catch (error) {
@@ -236,7 +252,7 @@ export function OptionsApp() {
               type="button"
               className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-sm"
               onClick={handleLogoClick}
-              title={state.metadata.debugMode ? 'Debug Tools enabled' : undefined}
+              title={DEBUG_TOOLS_ENABLED && state.metadata.debugMode ? 'Debug Tools enabled' : undefined}
             >
               <img src="/icons/icon.png" alt="Logo" className="h-full w-full object-cover" />
             </button>
@@ -324,7 +340,7 @@ export function OptionsApp() {
               settings={state.settings}
               onChange={saveSettings}
               onTest={testEmail}
-              showTest={Boolean(state.metadata.debugMode)}
+              showTest={Boolean(DEBUG_TOOLS_ENABLED && state.metadata.debugMode)}
             />
             <ImportExportPanel
               state={state}
@@ -371,7 +387,7 @@ export function OptionsApp() {
             </div>
             <div className="my-5 h-px bg-border-soft" />
 
-            {state.metadata.debugMode && (
+            {DEBUG_TOOLS_ENABLED && state.metadata.debugMode && (
               <div className="rounded-m border border-border bg-surface-2 p-6 text-text">
                 <div className="flex items-center justify-between gap-4">
                   <div>

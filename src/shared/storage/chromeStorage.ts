@@ -9,7 +9,10 @@ import {
 import { problemIdFor } from '../review/scheduler';
 import { FSRSScheduler } from '../review/fsrsScheduler';
 import { normalizeReminderDelivery } from '../reminders/delivery';
-import { uploadSupabaseSnapshot } from '../sync/supabaseSync';
+import {
+  configureSecureSyncStatusWriter,
+  withAutoSyncSuppressed
+} from '../sync/autoSync';
 import { pruneReviewLogs } from './retention';
 import {
   DebugScenarioPreset,
@@ -20,19 +23,19 @@ import {
   Problem,
   ProblemNote,
   ReviewLog,
-  ReviewPolicy
+  ReviewPolicy,
+  SecureSyncSettings
 } from '../types';
 // configEncryption removed - API key now built-in
 import { EmailWebhookSettings } from '../types';
 
 export const DEBUG_SCENARIO_PRESETS: DebugScenarioPreset[] = ['empty', 'mixed', 'overdue', 'import_preview'];
-const DEBUG_TOOLS_ENABLED = true;
+export const DEBUG_TOOLS_ENABLED = import.meta.env.DEV;
 export const MAX_NOTE_MARKDOWN_BYTES = 200 * 1024;
 const DEFAULT_LOCAL_STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
 const STORAGE_QUOTA_HEADROOM_RATIO = 0.9;
 
 let stateWriteQueue: Promise<unknown> = Promise.resolve();
-let autoCloudSyncQueue: Promise<unknown> = Promise.resolve();
 
 function byteLength(value: string): number {
   return new TextEncoder().encode(value).length;
@@ -70,20 +73,6 @@ function enqueueStateWrite<T>(task: () => Promise<T>): Promise<T> {
   const next = stateWriteQueue.then(task, task);
   stateWriteQueue = next.catch(() => undefined);
   return next;
-}
-
-function scheduleAutoCloudSync(state: ExtensionStorageState): void {
-  const config = state.settings.cloudSync;
-  if (!config.enabled || !config.syncKey) {
-    return;
-  }
-
-  autoCloudSyncQueue = autoCloudSyncQueue
-    .catch(() => undefined)
-    .then(() => uploadSupabaseSnapshot(state, config))
-    .catch((error) => {
-      console.warn('Crush LeetCode cloud sync upload failed.', error);
-    });
 }
 
 function isValidDateInput(value: unknown): value is string {
@@ -482,7 +471,39 @@ function normalizeReviewPolicy(input?: Partial<ReviewPolicy>): ReviewPolicy {
   };
 }
 
-function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageState {
+function normalizeCloudSync(input?: Partial<SecureSyncSettings>): SecureSyncSettings {
+  const legacyCode = typeof input?.syncKey === 'string' ? input.syncKey.trim() : '';
+  const recoveryCode = typeof input?.recoveryCode === 'string' ? input.recoveryCode.trim() : '';
+  const validStatuses: Array<NonNullable<SecureSyncSettings['status']>> = ['idle', 'pending', 'syncing', 'synced', 'conflict', 'error'];
+  const validMigrationStatuses: Array<NonNullable<SecureSyncSettings['migrationStatus']>> = ['not_started', 'preview_ready', 'migrating', 'migrated', 'cleanup_pending', 'failed'];
+  return {
+    ...DEFAULT_STATE.settings.cloudSync,
+    ...input,
+    enabled: Boolean(input?.enabled && recoveryCode),
+    recoveryCode: recoveryCode || undefined,
+    syncKey: legacyCode || undefined,
+    revision: typeof input?.revision === 'number' && Number.isSafeInteger(input.revision) && input.revision > 0
+      ? input.revision
+      : undefined,
+    status: input?.status && validStatuses.includes(input.status) ? input.status : 'idle',
+    conflict: input?.conflict && typeof input.conflict === 'object' && typeof input.conflict.detectedAt === 'string'
+      ? {
+          detectedAt: input.conflict.detectedAt,
+          remoteRevision: input.conflict.remoteRevision === null
+            ? null
+            : typeof input.conflict.remoteRevision === 'number' && Number.isSafeInteger(input.conflict.remoteRevision)
+              ? input.conflict.remoteRevision
+              : undefined
+        }
+      : undefined,
+    migrationStatus: input?.migrationStatus && validMigrationStatuses.includes(input.migrationStatus)
+      ? input.migrationStatus
+      : legacyCode ? 'not_started' : 'not_started',
+    legacyCleanupPending: Boolean(input?.legacyCleanupPending)
+  } as ExtensionStorageState['settings']['cloudSync'];
+}
+
+export function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageState {
   const normalizedProblemsById: ExtensionStorageState['problemsById'] = {};
   const problemIdMap = new Map<string, string>();
   const policy = normalizeReviewPolicy(input?.settings?.reviewPolicy);
@@ -546,11 +567,7 @@ function mergeState(input?: Partial<ExtensionStorageState>): ExtensionStorageSta
         ...input?.settings?.emailWebhook,
         betaAccessCode: input?.settings?.emailWebhook?.betaAccessCode?.replace(/\s+/g, '') || undefined
       },
-      cloudSync: {
-        ...DEFAULT_STATE.settings.cloudSync,
-        ...input?.settings?.cloudSync,
-        syncKey: input?.settings?.cloudSync?.syncKey?.trim() || undefined
-      },
+      cloudSync: normalizeCloudSync(input?.settings?.cloudSync),
       petSize: normalizePetSize(input?.settings?.petSize),
       dailyReviewLimit: normalizeDailyReviewLimit(input?.settings?.dailyReviewLimit)
     },
@@ -597,8 +614,20 @@ async function writeStateNow(state: ExtensionStorageState): Promise<void> {
   await chrome.storage.local.set({
     [STORAGE_KEY]: persisted
   });
-  scheduleAutoCloudSync(persisted);
 }
+
+configureSecureSyncStatusWriter(async (patch) => {
+  await enqueueStateWrite(async () => {
+    const current = await getState();
+    await writeStateNow({
+      ...current,
+      settings: {
+        ...current.settings,
+        cloudSync: { ...current.settings.cloudSync, ...patch }
+      }
+    });
+  });
+});
 
 export async function setState(state: ExtensionStorageState): Promise<void> {
   return enqueueStateWrite(() => writeStateNow(state));
@@ -662,32 +691,32 @@ export async function saveNote(problemId: string, markdown: string): Promise<Pro
 }
 
 export async function importState(input: unknown): Promise<ExtensionStorageState> {
-  if (!input || typeof input !== 'object') {
-    throw new Error('Invalid backup file.');
-  }
-
-  const merged = mergeState(input as Partial<ExtensionStorageState>);
-
-  // A4: a backup file must not be able to overwrite the local sync/mailer
-  // credentials. Preserve whatever is already stored on this device instead of
-  // trusting the imported blob. (Cloud restore passes the local syncKey through
-  // its own input, so this preserves the same value it would have applied.)
-  const current = await getState();
-  const state: ExtensionStorageState = {
-    ...merged,
-    settings: {
-      ...merged.settings,
-      cloudSync: current.settings.cloudSync,
-      emailWebhook: {
-        ...merged.settings.emailWebhook,
-        toEmail: current.settings.emailWebhook.toEmail,
-        betaAccessCode: current.settings.emailWebhook.betaAccessCode
-      }
+  return withAutoSyncSuppressed(async () => {
+    if (!input || typeof input !== 'object') {
+      throw new Error('Invalid backup file.');
     }
-  };
 
-  await setState(state);
-  return state;
+    const merged = mergeState(input as Partial<ExtensionStorageState>);
+
+    // Backups and remote snapshots cannot overwrite device-local sync/mailer
+    // credentials. Preserve those values from chrome.storage.local.
+    const current = await getState();
+    const state: ExtensionStorageState = {
+      ...merged,
+      settings: {
+        ...merged.settings,
+        cloudSync: current.settings.cloudSync,
+        emailWebhook: {
+          ...merged.settings.emailWebhook,
+          toEmail: current.settings.emailWebhook.toEmail,
+          betaAccessCode: current.settings.emailWebhook.betaAccessCode
+        }
+      }
+    };
+
+    await setState(state);
+    return state;
+  });
 }
 
 export function previewImportState(currentState: ExtensionStorageState, input: unknown): ImportPreview {
@@ -756,25 +785,27 @@ export async function applyDebugScenarioPreset(preset: DebugScenarioPreset): Pro
     throw new Error('Debug tools are only available in development.');
   }
 
-  const currentState = await getState();
-  const problemsById = createDebugScenarioProblems(preset);
-  const reviewLogsById = createDebugScenarioReviewLogs(preset, problemsById);
-  const notesByProblemId = createDebugScenarioNotes(preset, problemsById);
-  const coveredPresets = normalizeDebugPresets([...(currentState.metadata.debugCoveredPresets ?? []), preset]);
-  const nextState = mergeState({
-    ...currentState,
-    problemsById,
-    reviewLogsById,
-    notesByProblemId,
-    metadata: {
-      ...currentState.metadata,
-      debugMode: true,
-      debugActivePreset: preset,
-      debugCoveredPresets: coveredPresets
-    }
+  return withAutoSyncSuppressed(async () => {
+    const currentState = await getState();
+    const problemsById = createDebugScenarioProblems(preset);
+    const reviewLogsById = createDebugScenarioReviewLogs(preset, problemsById);
+    const notesByProblemId = createDebugScenarioNotes(preset, problemsById);
+    const coveredPresets = normalizeDebugPresets([...(currentState.metadata.debugCoveredPresets ?? []), preset]);
+    const nextState = mergeState({
+      ...currentState,
+      problemsById,
+      reviewLogsById,
+      notesByProblemId,
+      metadata: {
+        ...currentState.metadata,
+        debugMode: true,
+        debugActivePreset: preset,
+        debugCoveredPresets: coveredPresets
+      }
+    });
+    await setState(nextState);
+    return nextState;
   });
-  await setState(nextState);
-  return nextState;
 }
 
 export async function loadDebugQaCoveragePack(): Promise<ExtensionStorageState> {
@@ -782,16 +813,18 @@ export async function loadDebugQaCoveragePack(): Promise<ExtensionStorageState> 
     throw new Error('Debug tools are only available in development.');
   }
 
-  const state = await applyDebugScenarioPreset('mixed');
-  const nextState = mergeState({
-    ...state,
-    metadata: {
-      ...state.metadata,
-      debugMode: true,
-      debugActivePreset: 'mixed',
-      debugCoveredPresets: DEBUG_SCENARIO_PRESETS
-    }
+  return withAutoSyncSuppressed(async () => {
+    const state = await applyDebugScenarioPreset('mixed');
+    const nextState = mergeState({
+      ...state,
+      metadata: {
+        ...state.metadata,
+        debugMode: true,
+        debugActivePreset: 'mixed',
+        debugCoveredPresets: DEBUG_SCENARIO_PRESETS
+      }
+    });
+    await setState(nextState);
+    return nextState;
   });
-  await setState(nextState);
-  return nextState;
 }

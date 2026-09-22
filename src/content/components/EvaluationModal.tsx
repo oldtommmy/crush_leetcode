@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type {
-  ExtensionStorageState,
   Locale,
   Problem,
   ProblemIdentity,
@@ -9,6 +8,7 @@ import type {
   RuntimeRequest,
   RuntimeResponse
 } from '../../shared/types';
+import type { ProblemReviewContextData } from '../../background/runtimeData';
 import { RATING_LABELS } from '../../shared/review/ratingPolicy';
 import { RATING_EMOJI, RATING_ORDER, RATING_STYLES } from '../../shared/ui/rating';
 import { t } from '../../shared/i18n/messages';
@@ -64,19 +64,17 @@ export function EvaluationModal({ identity, locale, source, onClose, onSaved }: 
   const now = new Date();
 
   useEffect(() => {
+    const problemId = problemIdFor(identity);
     chrome.runtime
-      .sendMessage({ type: 'GET_DAILY_PLAN' } satisfies RuntimeRequest)
-      .then((response: RuntimeResponse<{ state: ExtensionStorageState, lastLogsByProblemId: Record<string, ReviewLog> }>) => {
+      .sendMessage({
+        type: 'GET_PROBLEM_REVIEW_CONTEXT',
+        payload: { problemId }
+      } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse<ProblemReviewContextData>) => {
         if (response.ok && response.data) {
-          const problemId = problemIdFor(identity);
-          const existing = response.data.state.problemsById[problemId];
-          if (existing) {
-            setExistingProblem(existing);
-            setLastLog(response.data.lastLogsByProblemId[problemId]);
-          }
-          if (response.data.state.settings.reviewPolicy) {
-            setPolicy(response.data.state.settings.reviewPolicy);
-          }
+          setExistingProblem(response.data.problem);
+          setLastLog(response.data.lastLog);
+          setPolicy(response.data.reviewPolicy);
         }
       })
       .catch(console.error);

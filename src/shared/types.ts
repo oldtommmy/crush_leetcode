@@ -133,12 +133,37 @@ export interface EmailWebhookSettings {
   lastSentAt?: string;
 }
 
-export interface SupabaseSyncSettings {
+export type SecureSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'conflict' | 'error';
+export type LegacyMigrationStatus =
+  | 'not_started'
+  | 'preview_ready'
+  | 'migrating'
+  | 'migrated'
+  | 'cleanup_pending'
+  | 'failed';
+
+export interface SecureSyncConflict {
+  remoteRevision?: number | null;
+  detectedAt: string;
+}
+
+export interface SecureSyncSettings {
   enabled: boolean;
+  /** Device-local secret. It is never included in backups or encrypted snapshots. */
+  recoveryCode?: string;
+  /** Legacy setting name retained only so version 2 storage can be normalized. */
   syncKey?: string;
+  revision?: number;
+  status?: SecureSyncStatus;
+  conflict?: SecureSyncConflict;
+  migrationStatus?: LegacyMigrationStatus;
+  legacyCleanupPending?: boolean;
   lastSyncedAt?: string;
   lastError?: string;
 }
+
+/** @deprecated Use SecureSyncSettings. */
+export type SupabaseSyncSettings = SecureSyncSettings;
 
 export interface ReminderProblemDelivery {
   problemId: string;
@@ -410,7 +435,20 @@ export type RuntimeRequest =
         source: ReviewSource;
       };
     }
-  | { type: 'GET_DAILY_PLAN' }
+  | { type: 'GET_POPUP_DAILY_PLAN' }
+  | { type: 'GET_CONTENT_SETTINGS' }
+  | {
+      type: 'GET_PROBLEM_REVIEW_CONTEXT';
+      payload: {
+        problemId: string;
+      };
+    }
+  | {
+      type: 'GET_PROBLEM_NOTE';
+      payload: {
+        problemId: string;
+      };
+    }
   | {
       type: 'GET_HOT_QUESTIONS';
       payload?: {

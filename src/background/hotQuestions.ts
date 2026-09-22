@@ -1,5 +1,6 @@
 import { CODETOP_BASE_URL, HOT_QUESTIONS_CACHE_KEY } from '../shared/constants';
 import { buildHotQuestionRecommendations } from '../shared/hotQuestions/recommendations';
+import { getCachedJsonResult } from './remoteJsonCache';
 import type {
   ExtensionStorageState,
   HotQuestion,
@@ -63,17 +64,17 @@ export function formatCodeTopFetchError(status: number, body: string): string {
   return `CodeTop API failed: ${status}${normalizedBody ? ` ${normalizedBody.slice(0, 180)}` : ''}`;
 }
 
-async function fetchJson<T>(path: string): Promise<ApiListResponse<T>> {
-  const response = await fetch(`${CODETOP_BASE_URL}${path}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    cache: 'no-store'
+async function fetchJson<T>(path: string, force: boolean): Promise<{ payload: ApiListResponse<T>; stale: boolean }> {
+  const result = await getCachedJsonResult<ApiListResponse<T>>({
+    cacheKey: `quizRecallCodeTopRemote:${path}`,
+    url: `${CODETOP_BASE_URL}${path}`,
+    ttlMs: CACHE_TTL_MS,
+    force,
+    normalize: (input) => input && typeof input === 'object' && !Array.isArray(input)
+      ? input as ApiListResponse<T>
+      : undefined
   });
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(formatCodeTopFetchError(response.status, text));
-  }
-  return await response.json() as ApiListResponse<T>;
+  return { payload: result.value, stale: result.stale };
 }
 
 function isFresh(timestamp: string | undefined): boolean {
@@ -90,16 +91,15 @@ function selectedCompanyId(cache: HotQuestionCacheState): number | undefined {
 }
 
 async function loadCompanies(cache: HotQuestionCacheState, force: boolean): Promise<HotQuestionCacheState> {
-  if (!force && cache.companies.length > 0) return cache;
-  const payload = await fetchJson<HotQuestionCompany>('/api/companies');
-  const companies = Array.isArray(payload.items) ? payload.items : [];
+  const { payload, stale } = await fetchJson<HotQuestionCompany>('/api/companies', force);
+  const companies = Array.isArray(payload.items) ? payload.items : cache.companies;
   return {
     ...cache,
     companies,
     selectedCompanyId: cache.selectedCompanyId ?? companies[0]?.id,
-    stale: payload.stale,
-    syncedAt: payload.syncedAt,
-    lastError: payload.error
+    stale: stale || payload.stale,
+    syncedAt: payload.syncedAt ?? cache.syncedAt,
+    lastError: stale ? cache.lastError ?? 'Showing cached company data.' : payload.error
   };
 }
 
@@ -109,8 +109,11 @@ async function loadQuestions(cache: HotQuestionCacheState, companyId: number, fo
     return cache;
   }
 
-  const payload = await fetchJson<HotQuestion>(`/api/hot-questions?companyId=${encodeURIComponent(companyId)}&limit=100`);
-  const questions = Array.isArray(payload.items) ? payload.items : [];
+  const { payload, stale } = await fetchJson<HotQuestion>(
+    `/api/hot-questions?companyId=${encodeURIComponent(companyId)}&limit=100`,
+    force
+  );
+  const questions = Array.isArray(payload.items) ? payload.items : cache.questionsByCompanyId[key] ?? [];
   const fetchedAt = new Date().toISOString();
   return {
     ...cache,
@@ -122,9 +125,9 @@ async function loadQuestions(cache: HotQuestionCacheState, companyId: number, fo
       ...cache.fetchedAtByCompanyId,
       [key]: fetchedAt
     },
-    stale: payload.stale,
-    syncedAt: payload.syncedAt,
-    lastError: payload.error
+    stale: stale || payload.stale,
+    syncedAt: payload.syncedAt ?? cache.syncedAt,
+    lastError: stale ? cache.lastError ?? 'Showing cached question data.' : payload.error
   };
 }
 
@@ -149,7 +152,7 @@ export async function getHotQuestionsRuntimeData(
   options: { force?: boolean } = {}
 ): Promise<HotQuestionsRuntimeData> {
   let cache = await getCache();
-  const shouldRefresh = Boolean(options.force || cache.stale || cache.lastError);
+  const shouldRefresh = Boolean(options.force);
   try {
     cache = await loadCompanies(cache, shouldRefresh);
     const companyId = selectedCompanyId(cache);

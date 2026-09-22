@@ -1,32 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import type {
   AnnouncementAction,
-  DueProblem,
   ExtensionAnnouncement,
-  ExtensionStorageState,
-  Problem,
-  ReviewStats,
   RuntimeRequest,
   RuntimeResponse
 } from '../shared/types';
+import type { PopupDailyPlanData } from '../background/runtimeData';
 import { t } from '../shared/i18n/messages';
 import { DailyPlan } from './components/DailyPlan';
 import { HotQuestionsPanel } from './components/HotQuestionsPanel';
 import { NoteEditor } from './components/NoteEditor';
 import { AnnouncementBanner } from '../shared/ui/AnnouncementBanner';
 
-interface DailyPlanResponse {
-  state: ExtensionStorageState;
-  dueProblems: DueProblem[];
-  dailyRemainingProblems: DueProblem[];
-  totalDailyRemainingCount: number;
-  completedTodayProblems: Problem[];
-  allProblems: Problem[];
-  stats: ReviewStats;
-}
-
 export function PopupApp() {
-  const [data, setData] = useState<DailyPlanResponse | undefined>();
+  const [data, setData] = useState<PopupDailyPlanData | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [showDonate, setShowDonate] = useState(false);
   const [announcement, setAnnouncement] = useState<ExtensionAnnouncement | undefined>();
@@ -42,8 +29,8 @@ export function PopupApp() {
 
   const load = useCallback(() => {
     chrome.runtime
-      .sendMessage({ type: 'GET_DAILY_PLAN' } satisfies RuntimeRequest)
-      .then((response: RuntimeResponse<DailyPlanResponse>) => {
+      .sendMessage({ type: 'GET_POPUP_DAILY_PLAN' } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse<PopupDailyPlanData>) => {
         if (!response.ok || !response.data) {
           throw new Error(response.error ?? 'Failed to load daily plan.');
         }
@@ -87,7 +74,7 @@ export function PopupApp() {
   const updateDailyReviewLimit = useCallback((limit: number) => {
     chrome.runtime
       .sendMessage({ type: 'UPDATE_DAILY_REVIEW_LIMIT', payload: { limit } } satisfies RuntimeRequest)
-      .then((response: RuntimeResponse<ExtensionStorageState>) => {
+      .then((response: RuntimeResponse<{ dailyReviewLimit: number }>) => {
         if (!response.ok) {
           throw new Error(response.error ?? 'Failed to update daily review limit.');
         }
@@ -96,8 +83,8 @@ export function PopupApp() {
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, [load]);
 
-  const locale = data?.state.settings.locale ?? 'en';
-  const problems = data ? Object.values(data.state.problemsById).filter((problem) => !problem.archived) : [];
+  const locale = data?.locale ?? 'en';
+  const problems = data?.allProblems ?? [];
 
   return (
     <main className="relative flex min-h-[520px] w-[400px] flex-col overflow-hidden rounded-xl bg-bg text-text">
@@ -177,13 +164,13 @@ export function PopupApp() {
                 allProblems={data.allProblems}
                 stats={data.stats}
                 locale={locale}
-                dailyReviewLimit={data.state.settings.dailyReviewLimit}
+                dailyReviewLimit={data.dailyReviewLimit}
                 onDailyReviewLimitChange={updateDailyReviewLimit}
                 onChanged={load}
               />
               <NoteEditor
                 problems={problems}
-                notes={data.state.notesByProblemId}
+                notes={data.notesByProblemId}
                 locale={locale}
                 onSaved={load}
               />

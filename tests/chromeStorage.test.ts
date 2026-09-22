@@ -27,6 +27,35 @@ describe('chromeStorage', () => {
     expect(set).not.toHaveBeenCalled();
   });
 
+  it('keeps legacy sync keys migration-only instead of promoting them to recovery codes', async () => {
+    get.mockResolvedValue({
+      [STORAGE_KEY]: {
+        settings: { cloudSync: { enabled: true, syncKey: ' legacy-recovery-code ' } }
+      }
+    });
+
+    const config = (await getState()).settings.cloudSync;
+    expect(config).toMatchObject({
+      enabled: false,
+      recoveryCode: undefined,
+      syncKey: 'legacy-recovery-code',
+      status: 'idle',
+      migrationStatus: 'not_started',
+      legacyCleanupPending: false
+    });
+  });
+
+  it('preserves distinct migrated and cleanup-pending states', async () => {
+    get.mockResolvedValue({
+      [STORAGE_KEY]: {
+        settings: { cloudSync: { enabled: false, migrationStatus: 'cleanup_pending', legacyCleanupPending: true } }
+      }
+    });
+    expect((await getState()).settings.cloudSync).toMatchObject({
+      migrationStatus: 'cleanup_pending', legacyCleanupPending: true
+    });
+  });
+
   it('defaults missing and invalid pet sizes to medium during migration', async () => {
     get.mockResolvedValue({
       [STORAGE_KEY]: {

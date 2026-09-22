@@ -197,19 +197,17 @@ function detectTags(): string[] {
   return [...new Set(tags)];
 }
 
-function detectChineseTitle(heading: string, platform: Platform): string | undefined {
-  const selectorTitle =
-    normalizeTitleText(text('[data-cy="question-title"]')) ||
-    normalizeTitleText(text('div[data-track-load="description_content"] [class*="text-title"]')) ||
-    extractTitleFromMeta();
-
+function detectChineseTitle(
+  heading: string,
+  platform: Platform,
+  selectorTitle: string | undefined,
+  matchingScripts: readonly string[]
+): string | undefined {
   if (includesChinese(selectorTitle)) {
     return stripQuestionNumber(selectorTitle as string);
   }
 
-  const translatedTitle = extractTranslatedTitleFromScripts(
-    Array.from(document.scripts, (script) => script.textContent ?? '')
-  );
+  const translatedTitle = extractTranslatedTitleFromScripts(matchingScripts);
   if (translatedTitle) {
     return translatedTitle;
   }
@@ -225,7 +223,12 @@ function detectChineseTitle(heading: string, platform: Platform): string | undef
   return undefined;
 }
 
-export function getProblemIdentity(locationRef = window.location): ProblemIdentity | undefined {
+export interface ProblemIdentityResolution {
+  complete: boolean;
+  identity: ProblemIdentity;
+}
+
+export function getProblemIdentityResolution(locationRef = window.location): ProblemIdentityResolution | undefined {
   const platform = detectPlatform(locationRef);
   const titleSlug = extractTitleSlug(locationRef.pathname);
   if (!platform || !titleSlug) {
@@ -233,37 +236,60 @@ export function getProblemIdentity(locationRef = window.location): ProblemIdenti
   }
 
   const scripts = Array.from(document.scripts, (script) => script.textContent ?? '');
-  const selectorHeading =
+  const matchingScripts = scripts.filter((content) => scriptMatchesTitleSlug(content, titleSlug));
+  const hasSlugBoundScriptData = matchingScripts.length > 0;
+  const rawSelectorHeading =
     normalizeTitleText(text('[data-cy="question-title"]')) ||
     normalizeTitleText(text('div[data-track-load="description_content"] [class*="text-title"]')) ||
     normalizeTitleText(text('a[href^="/problems/"][class*="text-title"]'));
-  const metaTitle = extractTitleFromMeta();
-  const h1 = normalizeTitleText(text('h1'));
-  const heading =
-    selectorHeading ||
-    (titleTextLooksLikeSlug(metaTitle, titleSlug) ? metaTitle : undefined) ||
-    (titleTextLooksLikeSlug(h1, titleSlug) ? h1 : undefined) ||
-    titleFromSlug(titleSlug);
-  const titleZh = detectChineseTitle(heading, platform);
+  const rawMetaTitle = extractTitleFromMeta();
+  const rawH1 = normalizeTitleText(text('h1'));
+  const translatedTitleFromScripts = extractTranslatedTitleFromScripts(matchingScripts);
+  const matchesTranslatedTitle = (value: string | undefined) =>
+    Boolean(
+      value &&
+        translatedTitleFromScripts &&
+        stripQuestionNumber(normalizeTitleText(value) ?? '') === stripQuestionNumber(translatedTitleFromScripts)
+    );
+  const isReliableHeading = (value: string | undefined) =>
+    Boolean(value && (titleTextLooksLikeSlug(value, titleSlug) || matchesTranslatedTitle(value)));
+  const selectorHeading = isReliableHeading(rawSelectorHeading) ? rawSelectorHeading : undefined;
+  const metaTitle = isReliableHeading(rawMetaTitle) ? rawMetaTitle : undefined;
+  const h1 = isReliableHeading(rawH1) ? rawH1 : undefined;
+  const reliableHeading = selectorHeading || metaTitle || h1;
+  const heading = reliableHeading || titleFromSlug(titleSlug);
+  const titleZh = detectChineseTitle(heading, platform, selectorHeading, matchingScripts);
   const frontendQuestionId =
     extractLeadingQuestionId(selectorHeading) ||
     extractLeadingQuestionId(metaTitle) ||
     extractLeadingQuestionId(h1) ||
-    extractQuestionFrontendIdFromScripts(scripts, titleSlug);
+    extractQuestionFrontendIdFromScripts(matchingScripts, titleSlug);
   const normalizedTitle = stripQuestionNumber(heading);
   const displayTitle = platform === 'leetcode-cn' ? titleFromSlug(titleSlug, frontendQuestionId) : normalizedTitle;
-  const difficultyFromScripts = extractDifficultyFromScripts(scripts, titleSlug);
-  const scriptTags = extractTagsFromScripts(scripts, titleSlug);
-  const detectedTags = detectTags();
+  const difficultyFromScripts = extractDifficultyFromScripts(matchingScripts, titleSlug);
+  const difficulty = difficultyFromScripts !== 'Unknown' ? difficultyFromScripts : detectDifficulty();
+  const scriptTags = extractTagsFromScripts(matchingScripts, titleSlug);
+  const detectedTags = hasSlugBoundScriptData ? [] : detectTags();
   const tags = canonicalizeTags(scriptTags.length > 0 ? scriptTags : detectedTags);
-
-  return {
+  const identity: ProblemIdentity = {
     platform,
     titleSlug,
     title: displayTitle,
     titleZh: titleZh ? `${frontendQuestionId ? `${frontendQuestionId}. ` : ''}${stripQuestionNumber(stripSiteSuffix(titleZh))}` : undefined,
-    difficulty: difficultyFromScripts !== 'Unknown' ? difficultyFromScripts : detectDifficulty(),
+    difficulty,
     tags,
     url: `${locationRef.origin}/problems/${titleSlug}/`
   };
+
+  const hasCompleteScriptMetadata =
+    difficultyFromScripts !== 'Unknown' && Boolean(frontendQuestionId || reliableHeading || translatedTitleFromScripts);
+
+  return {
+    identity,
+    complete: hasCompleteScriptMetadata || (Boolean(reliableHeading) && difficulty !== 'Unknown')
+  };
+}
+
+export function getProblemIdentity(locationRef = window.location): ProblemIdentity | undefined {
+  return getProblemIdentityResolution(locationRef)?.identity;
 }

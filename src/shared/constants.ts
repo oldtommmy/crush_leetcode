@@ -10,6 +10,7 @@ export const STORAGE_KEY = 'quizRecallState';
 export const STORAGE_VERSION = 2;
 export const HOT_QUESTIONS_CACHE_KEY = 'crushLC.hotQuestionsCache';
 export const DAILY_ALARM_NAME = 'quizRecall.dailyReminder';
+export const SECURE_SYNC_ALARM_NAME = 'quizRecall.secureSync';
 export const DEFAULT_DAILY_REVIEW_LIMIT = 10;
 export const MIN_DAILY_REVIEW_LIMIT = 1;
 export const MAX_DAILY_REVIEW_LIMIT = 50;
@@ -68,7 +69,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enabled: false
   },
   cloudSync: {
-    enabled: false
+    enabled: false,
+    status: 'idle',
+    migrationStatus: 'not_started',
+    legacyCleanupPending: false
   },
   themeMode: 'system',
   petSize: DEFAULT_PET_SIZE,

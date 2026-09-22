@@ -8,7 +8,10 @@ import { EvaluationModal } from './components/EvaluationModal';
 import { ProblemNoteButton } from './components/ProblemNoteButton';
 import { problemIdFor } from '../shared/review/scheduler';
 import { isSameLocalDate } from '../shared/date';
-import type { ExtensionStorageState, Locale, ProblemIdentity, RuntimeRequest, RuntimeResponse } from '../shared/types';
+import { STORAGE_KEY } from '../shared/constants';
+import { readContentSettingsData } from '../background/runtimeData';
+import type { ContentSettingsData, ProblemReviewContextData } from '../background/runtimeData';
+import type { Locale, ProblemIdentity, RuntimeRequest, RuntimeResponse } from '../shared/types';
 import '../styles/tailwind.css';
 
 interface AcceptedContext {
@@ -46,15 +49,29 @@ function ContentApp() {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
+    let receivedLiveSettingsUpdate = false;
+    const applyContentSettings = (settings: ContentSettingsData) => {
+      setLocale(settings.locale);
+      setAutoShow(settings.autoShowAcceptedModal);
+    };
+    const onStorageChanged = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
+      if (areaName !== 'local' || !changes[STORAGE_KEY]) return;
+      const settings = readContentSettingsData(changes[STORAGE_KEY].newValue);
+      if (settings) {
+        receivedLiveSettingsUpdate = true;
+        applyContentSettings(settings);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(onStorageChanged);
     chrome.runtime
-      .sendMessage({ type: 'GET_DAILY_PLAN' } satisfies RuntimeRequest)
-      .then((response: RuntimeResponse<{ state: ExtensionStorageState }>) => {
-        if (response.ok && response.data) {
-          setLocale(response.data.state.settings.locale);
-          setAutoShow(response.data.state.settings.autoShowAcceptedModal);
-        }
+      .sendMessage({ type: 'GET_CONTENT_SETTINGS' } satisfies RuntimeRequest)
+      .then((response: RuntimeResponse<ContentSettingsData>) => {
+        if (!receivedLiveSettingsUpdate && response.ok && response.data) applyContentSettings(response.data);
       })
       .catch(console.error);
+
+    return () => chrome.storage.onChanged.removeListener(onStorageChanged);
   }, []);
 
   useEffect(() => {
@@ -84,11 +101,14 @@ function ContentApp() {
 
       // Smart check: Only auto-pop if not reviewed today
       try {
-        const response = (await chrome.runtime.sendMessage({ type: 'GET_DAILY_PLAN' } satisfies RuntimeRequest)) as RuntimeResponse<{ state: ExtensionStorageState }>;
+        const problemId = problemIdFor(current);
+        const response = (await chrome.runtime.sendMessage({
+          type: 'GET_PROBLEM_REVIEW_CONTEXT',
+          payload: { problemId }
+        } satisfies RuntimeRequest)) as RuntimeResponse<ProblemReviewContextData>;
         if (response.ok && response.data) {
-          const problemId = problemIdFor(current);
-          const existing = response.data.state.problemsById[problemId];
-          
+          const existing = response.data.problem;
+
           const alreadyReviewedToday = existing?.lastReviewedAt && isSameLocalDate(existing.lastReviewedAt, new Date());
           
           if (!alreadyReviewedToday) {
